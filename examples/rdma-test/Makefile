@@ -31,31 +31,10 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-SPDK_ROOT_DIR := $(abspath $(CURDIR)/..)
+SPDK_ROOT_DIR := $(abspath $(CURDIR)/../..)
 include $(SPDK_ROOT_DIR)/mk/spdk.common.mk
-include $(SPDK_ROOT_DIR)/mk/spdk.lib_deps.mk
 
-DIRS-y += bdev blob blobfs conf dma accel event json jsonrpc \
-          log lvol rpc sock thread trace util nvme vmd nvmf scsi \
-          ioat ut_mock iscsi notify init trace_parser
-ifeq ($(OS),Linux)
-DIRS-y += nbd ftl
-endif
-
-DIRS-$(CONFIG_OCF) += env_ocf
-DIRS-$(CONFIG_IDXD) += idxd
-DIRS-$(CONFIG_VHOST) += vhost
-DIRS-$(CONFIG_VIRTIO) += virtio
-DIRS-$(CONFIG_REDUCE) += reduce
-DIRS-$(CONFIG_RDMA) += rdma rdma_server
-DIRS-$(CONFIG_VFIO_USER) += vfio_user
-
-# If CONFIG_ENV is pointing at a directory in lib, build it.
-# Out-of-tree env implementations must be built separately by the user.
-ENV_NAME := $(notdir $(CONFIG_ENV))
-ifeq ($(abspath $(CONFIG_ENV)),$(SPDK_ROOT_DIR)/lib/$(ENV_NAME))
-DIRS-y += $(ENV_NAME)
-endif
+DIRS-y += rdma-test
 
 .PHONY: all clean $(DIRS-y)
 

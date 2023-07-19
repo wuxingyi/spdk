@@ -31,35 +31,32 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-SPDK_ROOT_DIR := $(abspath $(CURDIR)/..)
+SPDK_ROOT_DIR := $(abspath $(CURDIR)/../..)
 include $(SPDK_ROOT_DIR)/mk/spdk.common.mk
-include $(SPDK_ROOT_DIR)/mk/spdk.lib_deps.mk
 
-DIRS-y += bdev blob blobfs conf dma accel event json jsonrpc \
-          log lvol rpc sock thread trace util nvme vmd nvmf scsi \
-          ioat ut_mock iscsi notify init trace_parser
-ifeq ($(OS),Linux)
-DIRS-y += nbd ftl
+SO_VER := 1
+SO_MINOR := 1
+
+C_SRCS = rdma_s.c server.c transport_s.c client.c cmd.c conn.c rdma_c.c transport_c.c utils.c
+
+LIBNAME = rdma_server
+LOCAL_SYS_LIBS += -libverbs -lrdmacm
+#Attach only if FreeBSD and RDMA is specified with configure
+ifeq ($(OS),FreeBSD)
+# Mellanox - MLX4 HBA Userspace Library
+ifneq ("$(wildcard /usr/lib/libmlx4.*)","")
+LOCAL_SYS_LIBS += -lmlx4
+endif
+# Mellanox - MLX5 HBA Userspace Library
+ifneq ("$(wildcard /usr/lib/libmlx5.*)","")
+LOCAL_SYS_LIBS += -lmlx5
+endif
+# Chelsio HBA Userspace Library
+ifneq ("$(wildcard /usr/lib/libcxgb4.*)","")
+LOCAL_SYS_LIBS += -lcxgb4
+endif
 endif
 
-DIRS-$(CONFIG_OCF) += env_ocf
-DIRS-$(CONFIG_IDXD) += idxd
-DIRS-$(CONFIG_VHOST) += vhost
-DIRS-$(CONFIG_VIRTIO) += virtio
-DIRS-$(CONFIG_REDUCE) += reduce
-DIRS-$(CONFIG_RDMA) += rdma rdma_server
-DIRS-$(CONFIG_VFIO_USER) += vfio_user
+SPDK_MAP_FILE = $(abspath $(CURDIR)/spdk_rdma_server.map)
 
-# If CONFIG_ENV is pointing at a directory in lib, build it.
-# Out-of-tree env implementations must be built separately by the user.
-ENV_NAME := $(notdir $(CONFIG_ENV))
-ifeq ($(abspath $(CONFIG_ENV)),$(SPDK_ROOT_DIR)/lib/$(ENV_NAME))
-DIRS-y += $(ENV_NAME)
-endif
-
-.PHONY: all clean $(DIRS-y)
-
-all: $(DIRS-y)
-clean: $(DIRS-y)
-
-include $(SPDK_ROOT_DIR)/mk/spdk.subdirs.mk
+include $(SPDK_ROOT_DIR)/mk/spdk.lib.mk

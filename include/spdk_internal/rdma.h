@@ -42,6 +42,10 @@
 /* Contains hooks definition */
 #include "spdk/nvme.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* rxe driver vendor_id has been changed from 0 to 0XFFFFFF in 0184afd15a141d7ce24c32c0d86a1e3ba6bc0eb3 */
 #define SPDK_RDMA_RXE_VENDOR_ID_OLD 0
 #define SPDK_RDMA_RXE_VENDOR_ID_NEW 0XFFFFFF
@@ -298,5 +302,9 @@ static inline uint32_t spdk_rdma_memory_translation_get_rkey(struct spdk_rdma_me
 	return translation->translation_type == SPDK_RDMA_TRANSLATION_MR ?
 	       translation->mr_or_key.mr->rkey : (uint32_t)translation->mr_or_key.key;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SPDK_RDMA_H */

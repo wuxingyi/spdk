@@ -316,6 +316,18 @@ void spdk_framework_enable_context_switch_monitor(bool enabled);
  */
 bool spdk_framework_context_switch_monitor_enabled(void);
 
+// void app_start_rpc(int rc, void *arg1);
+
+// void spdk_app_set_start_fn(spdk_msg_fn start_fn, void *arg1);
+
+// int app_setup_trace(struct spdk_app_opts *opts);
+
+// int app_setup_signal_handlers(struct spdk_app_opts *opts);
+
+// void spdk_app_set_g_spdk_app(struct spdk_app_opts *opts);
+
+// void spdk_app_set_g_spdk_thread(struct spdk_thread *thread);
+
 #ifdef __cplusplus
 }
 #endif
