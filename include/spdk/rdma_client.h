@@ -1741,6 +1741,8 @@ extern "C"
 	 */
 	void spdk_client_ctrlr_disconnect_io_qpair(struct spdk_client_qpair *qpair);
 
+    struct spdk_mempool* spdk_client_ctrlr_get_mempool(struct spdk_client_qpair *qpair);
+
 	/**
 	 * Attempt to reconnect the given qpair.
 	 *

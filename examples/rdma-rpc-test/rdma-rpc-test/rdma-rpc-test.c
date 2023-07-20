@@ -214,7 +214,7 @@ sig_handler(int signo)
 }
 
 static int
-setup_sig_handlers(void)
+SIsetup_sig_handlers(void)
 {
 	struct sigaction sigact = {};
 	int rc;

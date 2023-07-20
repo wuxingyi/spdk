@@ -382,6 +382,10 @@ void spdk_client_ctrlr_disconnect_io_qpair(struct spdk_client_qpair *qpair)
 	client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
 }
 
+struct spdk_mempool* spdk_client_ctrlr_get_mempool(struct spdk_client_qpair *qpair) {
+    return qpair->ctrlr->rpc_data_mp;
+}
+
 struct spdk_client_qpair *
 spdk_client_ctrlr_alloc_io_qpair(struct spdk_client_ctrlr *ctrlr,
 								 const struct spdk_client_io_qpair_opts *user_opts,
