@@ -590,7 +590,7 @@ hello_rdma_client_init(struct hello_context_t *ctx)
 
 	SPDK_NOTICELOG("Connecting to the server on %s:%d with sock_impl(%s)\n", ctx->host, ctx->port,
 				   ctx->sock_impl_name);
-	rc = spdk_client_transport_id_parse(&ctx->trid, "trtype:RDMA adrfam:IPV4 traddr:172.31.4.145 trsvcid:9999");
+	rc = spdk_client_transport_id_parse(&ctx->trid, "trtype:RDMA adrfam:IPV4 traddr:172.31.77.144 trsvcid:9999");
 	if (rc != 0)
 	{
 		SPDK_ERRLOG("spdk_client_transport_id_parse() failed, errno %d: %s\n",
@@ -708,7 +708,7 @@ void rpc_dispatcher_iovs(uint32_t opc, struct iovec *iovs, int iov_cnt, int leng
 static int hello_rdma_init(struct hello_context_t *ctx)
 {
 	struct spdk_srv_target_opts opts = {"test_tgt"};
-	struct spdk_srv_transport_id tid = {"test", SPDK_SRV_TRANSPORT_RDMA, SPDK_SRV_ADRFAM_IPV4, "172.31.4.145", "9999", 0};
+	struct spdk_srv_transport_id tid = {"test", SPDK_SRV_TRANSPORT_RDMA, SPDK_SRV_ADRFAM_IPV4, "172.31.77.144", "9999", 0};
 	ctx->tgt = spdk_srv_tgt_create(&opts);
 	spdk_srv_transport_opts_init("RDMA", &ctx->opts, sizeof(ctx->opts));
 	ctx->transport = spdk_srv_transport_create(ctx->name, &ctx->opts);
@@ -741,7 +741,6 @@ hello_start(void *arg1)
 	int rc;
 
 	SPDK_NOTICELOG("Successfully started the application\n");
-	setup_sig_handlers();
 	if (ctx->is_server)
 	{
 		rc = hello_rdma_init(ctx);
