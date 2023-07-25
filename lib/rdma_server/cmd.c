@@ -459,7 +459,6 @@ int spdk_client_ns_cmd_writev(struct spdk_client_qpair *qpair,
 void rpc_reclaim_out_iovs(struct rpc_request *req)
 {
 	struct iovec *iov;
-	int iovpos = 0;
 	for (int i = 0; i < req->out_iovcnt; i++)
 	{
 		iov = &req->out_iovs[i];
@@ -478,7 +477,6 @@ void rpc_reclaim_out_iovs(struct rpc_request *req)
 void rpc_reclaim_in_iovs(struct rpc_request *req)
 {
 	struct iovec *iov;
-	int iovpos = 0;
 	for (int i = 0; i < req->in_iovcnt; i++)
 	{
 		iov = &req->in_iovs[i];
@@ -851,7 +849,6 @@ int spdk_client_rpc_request_read(struct spdk_client_qpair *qpair,
 
 void rpc_read_cb(void *ctx, const struct spdk_req_cpl *cpl)
 {
-	int ret = 0;
 	struct spdk_md5ctx md5ctx;
 	uint8_t md5sum[SPDK_MD5DIGEST_LEN];
 	// TODO: check rpc status,  maybe use sqhd field
@@ -952,7 +949,7 @@ int spdk_client_submit_rpc_request(struct spdk_client_qpair *qpair, uint32_t opc
 	if (rpc_prepare_out_iovs(req) != 0)
 	{
 		STAILQ_INSERT_HEAD(&qpair->free_rpc_req, req, stailq);
-		return NULL;
+		return 0;
 	}
 
 	if (chek_md5)
@@ -1043,7 +1040,7 @@ int spdk_client_submit_rpc_request_iovs(struct spdk_client_qpair *qpair, uint32_
 	if (rpc_prepare_out_iovs(req) != 0)
 	{
 		STAILQ_INSERT_HEAD(&qpair->free_rpc_req, req, stailq);
-		return NULL;
+		return 0;
 	}
 
 	if (chek_md5)
