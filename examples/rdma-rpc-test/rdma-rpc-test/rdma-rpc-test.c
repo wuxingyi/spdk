@@ -118,7 +118,6 @@ struct hello_context_t
 	struct spdk_client_transport_id trid;
 	struct ns_worker_stats stats;
 	int current_queue_depth;
-	struct spdk_client_ns *ns;
 	struct spdk_client_ctrlr_opts ops;
 	struct spdk_client_io_qpair_opts conn_opts;
 	struct spdk_client_qpair *conn;

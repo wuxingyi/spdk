@@ -194,10 +194,6 @@ struct client_payload
 	spdk_client_req_next_sge_cb next_sge_fn;
 
 	/**
-	 * Extended IO options passed by the user
-	 */
-	struct spdk_client_ns_cmd_ext_io_opts *opts;
-	/**
 	 * If reset_sgl_fn == NULL, this is a contig payload, and contig_or_cb_arg contains the
 	 * virtual memory address of a single virtually contiguous buffer.
 	 *
@@ -508,31 +504,6 @@ struct spdk_client_transport_poll_group
 	link;
 	bool in_completion_context;
 	uint64_t num_qpairs_to_delete;
-};
-
-struct spdk_client_ns
-{
-	struct spdk_client_ctrlr *ctrlr;
-	uint32_t sector_size;
-
-	/*
-	 * Size of data transferred as part of each block,
-	 * including metadata if FLBAS indicates the metadata is transferred
-	 * as part of the data buffer at the end of each LBA.
-	 */
-	uint32_t extended_lba_size;
-
-	uint32_t md_size;
-	uint32_t pi_type;
-	uint32_t sectors_per_max_io;
-	uint32_t sectors_per_max_io_no_md;
-	uint32_t sectors_per_stripe;
-	uint32_t id;
-	uint16_t flags;
-	bool active;
-
-	RB_ENTRY(spdk_client_ns)
-	node;
 };
 
 /**
@@ -1164,10 +1135,6 @@ struct spdk_client_ctrlr
 {
 	/* Hot data (accessed in I/O path) starts here. */
 
-	/* Tree of namespaces */
-	RB_HEAD(client_ns_tree, spdk_client_ns)
-	ns;
-
 	/* The number of active namespaces */
 	uint32_t active_ns_count;
 
@@ -1442,7 +1409,6 @@ void client_ctrlr_destruct_async(struct spdk_client_ctrlr *ctrlr,
 int client_ctrlr_destruct_poll_async(struct spdk_client_ctrlr *ctrlr,
 									 struct client_ctrlr_detach_ctx *ctx);
 void client_ctrlr_fail(struct spdk_client_ctrlr *ctrlr, bool hot_remove);
-int client_ctrlr_process_init(struct spdk_client_ctrlr *ctrlr);
 void client_ctrlr_connected(struct spdk_client_probe_ctx *probe_ctx,
 							struct spdk_client_ctrlr *ctrlr);
 
@@ -1472,24 +1438,6 @@ uint32_t client_qpair_abort_queued_reqs_with_cbarg(struct spdk_client_qpair *qpa
 void client_qpair_abort_queued_reqs(struct spdk_client_qpair *qpair, uint32_t dnr);
 void client_qpair_resubmit_requests(struct spdk_client_qpair *qpair, uint32_t num_requests);
 int client_ctrlr_identify_active_ns(struct spdk_client_ctrlr *ctrlr);
-int client_ctrlr_construct_namespace(struct spdk_client_ctrlr *ctrlr, uint32_t nsid);
-void client_ns_set_identify_data(struct spdk_client_ns *ns);
-void client_ns_set_id_desc_list_data(struct spdk_client_ns *ns);
-void client_ns_free_zns_specific_data(struct spdk_client_ns *ns);
-void client_ns_free_iocs_specific_data(struct spdk_client_ns *ns);
-bool client_ns_has_supported_iocs_specific_data(struct spdk_client_ns *ns);
-int client_ns_construct(struct spdk_client_ns *ns, uint32_t id,
-						struct spdk_client_ctrlr *ctrlr);
-int client_ns_cmd_zone_append_with_md(struct spdk_client_ns *ns, struct spdk_client_qpair *qpair,
-									  void *buffer, void *metadata, uint64_t zslba,
-									  uint32_t lba_count, spdk_req_cmd_cb cb_fn, void *cb_arg,
-									  uint32_t io_flags, uint16_t apptag_mask, uint16_t apptag);
-int client_ns_cmd_zone_appendv_with_md(struct spdk_client_ns *ns, struct spdk_client_qpair *qpair,
-									   uint64_t zslba, uint32_t lba_count,
-									   spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t io_flags,
-									   spdk_client_req_reset_sgl_cb reset_sgl_fn,
-									   spdk_client_req_next_sge_cb next_sge_fn, void *metadata,
-									   uint16_t apptag_mask, uint16_t apptag);
 
 int client_fabric_ctrlr_set_reg_4(struct spdk_client_ctrlr *ctrlr, uint32_t offset, uint32_t value);
 int client_fabric_ctrlr_set_reg_8(struct spdk_client_ctrlr *ctrlr, uint32_t offset, uint64_t value);

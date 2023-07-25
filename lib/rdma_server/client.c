@@ -43,28 +43,6 @@
 
 struct client_active_ns_ctx;
 pid_t g_spdk_client_pid;
-static void client_ctrlr_init_cap(struct spdk_client_ctrlr *ctrlr);
-static void client_ctrlr_set_state(struct spdk_client_ctrlr *ctrlr, enum client_ctrlr_state state,
-								   uint64_t timeout_in_ms);
-
-static int
-client_ns_cmp(struct spdk_client_ns *ns1, struct spdk_client_ns *ns2)
-{
-	if (ns1->id < ns2->id)
-	{
-		return -1;
-	}
-	else if (ns1->id > ns2->id)
-	{
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
-}
-
-RB_GENERATE_STATIC(client_ns_tree, spdk_client_ns, node, client_ns_cmp);
 
 #define CTRLR_STRING(ctrlr) \
 	("")
@@ -694,18 +672,6 @@ void client_ctrlr_fail(struct spdk_client_ctrlr *ctrlr, bool hot_remove)
 	CLIENT_CTRLR_ERRLOG(ctrlr, "in failed state.\n");
 }
 
-/**
- * This public API function will try to take the controller lock.
- * Any private functions being called from a thread already holding
- * the ctrlr lock should call client_ctrlr_fail directly.
- */
-void spdk_client_ctrlr_fail(struct spdk_client_ctrlr *ctrlr)
-{
-	client_robust_mutex_lock(&ctrlr->ctrlr_lock);
-	client_ctrlr_fail(ctrlr, false);
-	client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
-}
-
 static void
 client_ctrlr_shutdown_async(struct spdk_client_ctrlr *ctrlr,
 							struct client_ctrlr_detach_ctx *ctx)
@@ -888,75 +854,6 @@ client_ctrlr_state_string(enum client_ctrlr_state state)
 };
 
 static void
-_client_ctrlr_set_state(struct spdk_client_ctrlr *ctrlr, enum client_ctrlr_state state,
-						uint64_t timeout_in_ms, bool quiet)
-{
-	uint64_t ticks_per_ms, timeout_in_ticks, now_ticks;
-
-	ctrlr->state = state;
-	if (timeout_in_ms == CLIENT_TIMEOUT_KEEP_EXISTING)
-	{
-		if (!quiet)
-		{
-			CLIENT_CTRLR_DEBUGLOG(ctrlr, "setting state to %s (keeping existing timeout)\n",
-								  client_ctrlr_state_string(ctrlr->state));
-		}
-		return;
-	}
-
-	if (timeout_in_ms == CLIENT_TIMEOUT_INFINITE)
-	{
-		goto inf;
-	}
-
-	ticks_per_ms = spdk_get_ticks_hz() / 1000;
-	if (timeout_in_ms > UINT64_MAX / ticks_per_ms)
-	{
-		CLIENT_CTRLR_ERRLOG(ctrlr,
-							"Specified timeout would cause integer overflow. Defaulting to no timeout.\n");
-		goto inf;
-	}
-
-	now_ticks = spdk_get_ticks();
-	timeout_in_ticks = timeout_in_ms * ticks_per_ms;
-	if (timeout_in_ticks > UINT64_MAX - now_ticks)
-	{
-		CLIENT_CTRLR_ERRLOG(ctrlr,
-							"Specified timeout would cause integer overflow. Defaulting to no timeout.\n");
-		goto inf;
-	}
-
-	ctrlr->state_timeout_tsc = timeout_in_ticks + now_ticks;
-	if (!quiet)
-	{
-		CLIENT_CTRLR_DEBUGLOG(ctrlr, "setting state to %s (timeout %" PRIu64 " ms)\n",
-							  client_ctrlr_state_string(ctrlr->state), timeout_in_ms);
-	}
-	return;
-inf:
-	if (!quiet)
-	{
-		CLIENT_CTRLR_DEBUGLOG(ctrlr, "setting state to %s (no timeout)\n",
-							  client_ctrlr_state_string(ctrlr->state));
-	}
-	ctrlr->state_timeout_tsc = CLIENT_TIMEOUT_INFINITE;
-}
-
-static void
-client_ctrlr_set_state(struct spdk_client_ctrlr *ctrlr, enum client_ctrlr_state state,
-					   uint64_t timeout_in_ms)
-{
-	_client_ctrlr_set_state(ctrlr, state, timeout_in_ms, false);
-}
-
-static void
-client_ctrlr_set_state_quiet(struct spdk_client_ctrlr *ctrlr, enum client_ctrlr_state state,
-							 uint64_t timeout_in_ms)
-{
-	_client_ctrlr_set_state(ctrlr, state, timeout_in_ms, true);
-}
-
-static void
 client_ctrlr_abort_queued_aborts(struct spdk_client_ctrlr *ctrlr)
 {
 	struct client_request *req, *tmp;
@@ -1016,109 +913,6 @@ int spdk_client_ctrlr_disconnect(struct spdk_client_ctrlr *ctrlr)
 	return 0;
 }
 
-void spdk_client_ctrlr_reconnect_async(struct spdk_client_ctrlr *ctrlr)
-{
-	client_robust_mutex_lock(&ctrlr->ctrlr_lock);
-
-	/* Set the state back to INIT to cause a full hardware reset. */
-	client_ctrlr_set_state(ctrlr, CLIENT_CTRLR_STATE_INIT, CLIENT_TIMEOUT_INFINITE);
-
-	/* Return without releasing ctrlr_lock. ctrlr_lock will be released when
-	 * spdk_client_ctrlr_reset_poll_async() returns 0.
-	 */
-}
-
-static int
-client_ctrlr_reset_pre(struct spdk_client_ctrlr *ctrlr)
-{
-	int rc;
-
-	rc = spdk_client_ctrlr_disconnect(ctrlr);
-	if (rc != 0)
-	{
-		return rc;
-	}
-
-	spdk_client_ctrlr_reconnect_async(ctrlr);
-	return 0;
-}
-
-/**
- * This function will be called when the controller is being reinitialized.
- * Note: the ctrlr_lock must be held when calling this function.
- */
-int spdk_client_ctrlr_reconnect_poll_async(struct spdk_client_ctrlr *ctrlr)
-{
-	struct spdk_client_ns *ns, *tmp_ns;
-	struct spdk_client_qpair *qpair;
-	int rc = 0, rc_tmp = 0;
-	bool async;
-
-	if (client_ctrlr_process_init(ctrlr) != 0)
-	{
-		CLIENT_CTRLR_ERRLOG(ctrlr, "controller reinitialization failed\n");
-		rc = -1;
-	}
-	if (ctrlr->state != CLIENT_CTRLR_STATE_READY && rc != -1)
-	{
-		return -EAGAIN;
-	}
-
-	/*
-	 * For non-fabrics controllers, the memory locations of the transport qpair
-	 * don't change when the controller is reset. They simply need to be
-	 * re-enabled with admin commands to the controller. For fabric
-	 * controllers we need to disconnect and reconnect the qpair on its
-	 * own thread outside of the context of the reset.
-	 */
-	if (rc == 0 && !spdk_client_ctrlr_is_fabrics(ctrlr))
-	{
-		/* Reinitialize qpairs */
-		TAILQ_FOREACH(qpair, &ctrlr->active_io_qpairs, tailq)
-		{
-			assert(spdk_bit_array_get(ctrlr->free_io_qids, qpair->id));
-			spdk_bit_array_clear(ctrlr->free_io_qids, qpair->id);
-
-			/* Force a synchronous connect. We can't currently handle an asynchronous
-			 * operation here. */
-			async = qpair->async;
-			qpair->async = false;
-			rc_tmp = client_transport_ctrlr_connect_qpair(ctrlr, qpair);
-			qpair->async = async;
-
-			if (rc_tmp != 0)
-			{
-				rc = rc_tmp;
-				qpair->transport_failure_reason = SPDK_CLIENT_QPAIR_FAILURE_LOCAL;
-				continue;
-			}
-		}
-	}
-
-	/*
-	 * Take this opportunity to remove inactive namespaces. During a reset namespace
-	 * handles can be invalidated.
-	 */
-	RB_FOREACH_SAFE(ns, client_ns_tree, &ctrlr->ns, tmp_ns)
-	{
-		if (!ns->active)
-		{
-			RB_REMOVE(client_ns_tree, &ctrlr->ns, ns);
-			spdk_free(ns);
-		}
-	}
-
-	if (rc)
-	{
-		client_ctrlr_fail(ctrlr, false);
-	}
-	ctrlr->is_resetting = false;
-
-	client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
-
-	return rc;
-}
-
 enum client_active_ns_state
 {
 	CLIENT_ACTIVE_NS_STATE_IDLE,
@@ -1139,83 +933,6 @@ struct client_active_ns_ctx
 
 	enum client_active_ns_state state;
 };
-
-static struct client_active_ns_ctx *
-client_active_ns_ctx_create(struct spdk_client_ctrlr *ctrlr, client_active_ns_ctx_deleter deleter)
-{
-	struct client_active_ns_ctx *ctx;
-	uint32_t *new_ns_list = NULL;
-
-	ctx = calloc(1, sizeof(*ctx));
-	if (!ctx)
-	{
-		CLIENT_CTRLR_ERRLOG(ctrlr, "Failed to allocate client_active_ns_ctx!\n");
-		return NULL;
-	}
-
-	new_ns_list = spdk_zmalloc(sizeof(struct spdk_client_ns_list), ctrlr->page_size,
-							   NULL, SPDK_ENV_LCORE_ID_ANY, SPDK_MALLOC_SHARE);
-	if (!new_ns_list)
-	{
-		CLIENT_CTRLR_ERRLOG(ctrlr, "Failed to allocate active_ns_list!\n");
-		free(ctx);
-		return NULL;
-	}
-
-	ctx->page_count = 1;
-	ctx->new_ns_list = new_ns_list;
-	ctx->ctrlr = ctrlr;
-	ctx->deleter = deleter;
-
-	return ctx;
-}
-
-static void
-client_active_ns_ctx_destroy(struct client_active_ns_ctx *ctx)
-{
-	spdk_free(ctx->new_ns_list);
-	free(ctx);
-}
-
-static int
-client_ctrlr_destruct_namespace(struct spdk_client_ctrlr *ctrlr, uint32_t nsid)
-{
-	struct spdk_client_ns tmp, *ns;
-
-	assert(ctrlr != NULL);
-
-	tmp.id = nsid;
-	ns = RB_FIND(client_ns_tree, &ctrlr->ns, &tmp);
-	if (ns == NULL)
-	{
-		return -EINVAL;
-	}
-
-	ns->active = false;
-
-	return 0;
-}
-
-int client_ctrlr_construct_namespace(struct spdk_client_ctrlr *ctrlr, uint32_t nsid)
-{
-	struct spdk_client_ns *ns;
-
-	if (nsid < 1 || nsid > 255)
-	{
-		return -EINVAL;
-	}
-
-	/* Namespaces are constructed on demand, so simply request it. */
-	ns = spdk_client_ctrlr_get_ns(ctrlr, nsid);
-	if (ns == NULL)
-	{
-		return -ENOMEM;
-	}
-
-	ns->active = true;
-
-	return 0;
-}
 
 struct spdk_client_ctrlr_process *
 client_ctrlr_get_process(struct spdk_client_ctrlr *ctrlr, pid_t pid)
@@ -1465,91 +1182,6 @@ int client_ctrlr_get_ref_count(struct spdk_client_ctrlr *ctrlr)
 	return ref;
 }
 
-/**
- * This function will be called repeatedly during initialization until the controller is ready.
- */
-int client_ctrlr_process_init(struct spdk_client_ctrlr *ctrlr)
-{
-	uint32_t ready_timeout_in_ms;
-	uint64_t ticks;
-	int rc = 0;
-
-	ticks = spdk_get_ticks();
-
-	/*
-	 * May need to avoid accessing any register on the target controller
-	 * for a while. Return early without touching the FSM.
-	 * Check sleep_timeout_tsc > 0 for unit test.
-	 */
-	if ((ctrlr->sleep_timeout_tsc > 0) &&
-		(ticks <= ctrlr->sleep_timeout_tsc))
-	{
-		return 0;
-	}
-	ctrlr->sleep_timeout_tsc = 0;
-
-	/*
-	 * Check if the current initialization step is done or has timed out.
-	 */
-	switch (ctrlr->state)
-	{
-	case CLIENT_CTRLR_STATE_INIT_DELAY:
-		client_ctrlr_set_state(ctrlr, CLIENT_CTRLR_STATE_INIT, CLIENT_TIMEOUT_INFINITE);
-
-	case CLIENT_CTRLR_STATE_READY:
-		CLIENT_CTRLR_DEBUGLOG(ctrlr, "Ctrlr already in ready state\n");
-		return 0;
-
-	case CLIENT_CTRLR_STATE_ERROR:
-		CLIENT_CTRLR_ERRLOG(ctrlr, "Ctrlr is in error state\n");
-		return -1;
-
-	case CLIENT_CTRLR_STATE_READ_VS_WAIT_FOR_VS:
-	case CLIENT_CTRLR_STATE_READ_CAP_WAIT_FOR_CAP:
-	case CLIENT_CTRLR_STATE_CHECK_EN_WAIT_FOR_CC:
-	case CLIENT_CTRLR_STATE_SET_EN_0_WAIT_FOR_CC:
-	case CLIENT_CTRLR_STATE_DISABLE_WAIT_FOR_READY_1_WAIT_FOR_CSTS:
-	case CLIENT_CTRLR_STATE_DISABLE_WAIT_FOR_READY_0_WAIT_FOR_CSTS:
-	case CLIENT_CTRLR_STATE_ENABLE_WAIT_FOR_CC:
-	case CLIENT_CTRLR_STATE_ENABLE_WAIT_FOR_READY_1_WAIT_FOR_CSTS:
-	case CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY:
-	case CLIENT_CTRLR_STATE_WAIT_FOR_CONFIGURE_AER:
-	case CLIENT_CTRLR_STATE_WAIT_FOR_KEEP_ALIVE_TIMEOUT:
-	case CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY_IOCS_SPECIFIC:
-	case CLIENT_CTRLR_STATE_WAIT_FOR_GET_ZNS_CMD_EFFECTS_LOG:
-	case CLIENT_CTRLR_STATE_WAIT_FOR_SET_NUM_QUEUES:
-	case CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY_ACTIVE_NS:
-	case CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY_NS:
-	case CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY_ID_DESCS:
-	case CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY_NS_IOCS_SPECIFIC:
-	case CLIENT_CTRLR_STATE_WAIT_FOR_SUPPORTED_INTEL_LOG_PAGES:
-	case CLIENT_CTRLR_STATE_WAIT_FOR_DB_BUF_CFG:
-	case CLIENT_CTRLR_STATE_WAIT_FOR_HOST_ID:
-		spdk_client_qpair_process_completions(ctrlr->adminq, 0);
-		break;
-
-	default:
-		assert(0);
-		return -1;
-	}
-
-	/* Note: we use the ticks captured when we entered this function.
-	 * This covers environments where the SPDK process gets swapped out after
-	 * we tried to advance the state but before we check the timeout here.
-	 * It is not normal for this to happen, but harmless to handle it in this
-	 * way.
-	 */
-	if (ctrlr->state_timeout_tsc != CLIENT_TIMEOUT_INFINITE &&
-		ticks > ctrlr->state_timeout_tsc)
-	{
-		CLIENT_CTRLR_ERRLOG(ctrlr, "Initialization timed out in state %d (%s)\n",
-							ctrlr->state, client_ctrlr_state_string(ctrlr->state));
-		return -1;
-	}
-
-	return rc;
-}
-
 int client_robust_mutex_init_recursive_shared(pthread_mutex_t *mtx)
 {
 	pthread_mutexattr_t attr;
@@ -1576,8 +1208,6 @@ int client_ctrlr_construct(struct spdk_client_ctrlr *ctrlr)
 {
 	int rc;
 
-	client_ctrlr_set_state(ctrlr, CLIENT_CTRLR_STATE_INIT, CLIENT_TIMEOUT_INFINITE);
-
 	ctrlr->flags = 0;
 	ctrlr->free_io_qids = NULL;
 	ctrlr->is_resetting = false;
@@ -1585,11 +1215,6 @@ int client_ctrlr_construct(struct spdk_client_ctrlr *ctrlr)
 	ctrlr->is_destructed = false;
 
 	ctrlr->free_io_qids = spdk_bit_array_create(ctrlr->opts.num_io_queues + 1);
-	if (ctrlr->free_io_qids == NULL)
-	{
-		client_ctrlr_set_state(ctrlr, CLIENT_CTRLR_STATE_ERROR, CLIENT_TIMEOUT_INFINITE);
-		return -1;
-	}
 
 	for (int i = 1; i <= ctrlr->opts.num_io_queues; i++)
 	{
@@ -1610,17 +1235,7 @@ int client_ctrlr_construct(struct spdk_client_ctrlr *ctrlr)
 	TAILQ_INIT(&ctrlr->active_procs);
 	STAILQ_INIT(&ctrlr->register_operations);
 
-	RB_INIT(&ctrlr->ns);
-	client_ctrlr_set_state(ctrlr, CLIENT_CTRLR_STATE_READY, CLIENT_TIMEOUT_INFINITE);
 	return rc;
-}
-
-static void
-client_ctrlr_init_cap(struct spdk_client_ctrlr *ctrlr)
-{
-
-	ctrlr->opts.io_queue_size = spdk_max(ctrlr->opts.io_queue_size, SPDK_CLIENT_IO_QUEUE_MIN_ENTRIES);
-	ctrlr->opts.io_queue_size = spdk_min(ctrlr->opts.io_queue_size, MAX_IO_QUEUE_ENTRIES);
 }
 
 void client_ctrlr_destruct_finish(struct spdk_client_ctrlr *ctrlr)
@@ -1650,7 +1265,6 @@ void client_ctrlr_destruct_async(struct spdk_client_ctrlr *ctrlr,
 int client_ctrlr_destruct_poll_async(struct spdk_client_ctrlr *ctrlr,
 									 struct client_ctrlr_detach_ctx *ctx)
 {
-	struct spdk_client_ns *ns, *tmp_ns;
 	int rc = 0;
 
 	if (!ctx->shutdown_complete)
@@ -1667,15 +1281,6 @@ int client_ctrlr_destruct_poll_async(struct spdk_client_ctrlr *ctrlr,
 	{
 		ctx->cb_fn(ctrlr);
 	}
-
-	RB_FOREACH_SAFE(ns, client_ns_tree, &ctrlr->ns, tmp_ns)
-	{
-		client_ctrlr_destruct_namespace(ctrlr, ns->id);
-		RB_REMOVE(client_ns_tree, &ctrlr->ns, ns);
-		spdk_free(ns);
-	}
-
-	ctrlr->active_ns_count = 0;
 
 	spdk_bit_array_free(&ctrlr->free_io_qids);
 
@@ -1708,154 +1313,10 @@ int client_ctrlr_submit_admin_request(struct spdk_client_ctrlr *ctrlr,
 	return client_qpair_submit_request(ctrlr->adminq, req);
 }
 
-static void
-client_keep_alive_completion(void *cb_ctx, const struct spdk_req_cpl *cpl)
-{
-	/* Do nothing */
-}
-
-/*
- * Check if we need to send a Keep Alive command.
- * Caller must hold ctrlr->ctrlr_lock.
- */
-static int
-client_ctrlr_keep_alive(struct spdk_client_ctrlr *ctrlr)
-{
-	uint64_t now;
-	struct client_request *req;
-	struct spdk_req_cmd *cmd;
-	int rc = 0;
-
-	now = spdk_get_ticks();
-	if (now < ctrlr->next_keep_alive_tick)
-	{
-		return rc;
-	}
-
-	req = client_allocate_request_null(ctrlr->adminq, client_keep_alive_completion, NULL);
-	if (req == NULL)
-	{
-		return rc;
-	}
-
-	cmd = &req->cmd;
-	cmd->opc = SPDK_CLIENT_OPC_KEEP_ALIVE;
-
-	rc = client_ctrlr_submit_admin_request(ctrlr, req);
-	if (rc != 0)
-	{
-		CLIENT_CTRLR_ERRLOG(ctrlr, "Submitting Keep Alive failed\n");
-		rc = -ENXIO;
-	}
-
-	ctrlr->next_keep_alive_tick = now + ctrlr->keep_alive_interval_ticks;
-	return rc;
-}
-
 uint64_t
 spdk_client_ctrlr_get_pmrsz(struct spdk_client_ctrlr *ctrlr)
 {
 	return ctrlr->pmr_size;
-}
-
-bool spdk_client_ctrlr_is_active_ns(struct spdk_client_ctrlr *ctrlr, uint32_t nsid)
-{
-	struct spdk_client_ns tmp, *ns;
-
-	tmp.id = nsid;
-	ns = RB_FIND(client_ns_tree, &ctrlr->ns, &tmp);
-
-	if (ns != NULL)
-	{
-		return ns->active;
-	}
-
-	return false;
-}
-
-uint32_t
-spdk_client_ctrlr_get_first_active_ns(struct spdk_client_ctrlr *ctrlr)
-{
-	struct spdk_client_ns *ns;
-
-	ns = RB_MIN(client_ns_tree, &ctrlr->ns);
-	if (ns == NULL)
-	{
-		return 0;
-	}
-
-	while (ns != NULL)
-	{
-		if (ns->active)
-		{
-			return ns->id;
-		}
-
-		ns = RB_NEXT(client_ns_tree, &ctrlr->ns, ns);
-	}
-
-	return 0;
-}
-
-uint32_t
-spdk_client_ctrlr_get_next_active_ns(struct spdk_client_ctrlr *ctrlr, uint32_t prev_nsid)
-{
-	struct spdk_client_ns tmp, *ns;
-
-	tmp.id = prev_nsid;
-	ns = RB_FIND(client_ns_tree, &ctrlr->ns, &tmp);
-	if (ns == NULL)
-	{
-		return 0;
-	}
-
-	ns = RB_NEXT(client_ns_tree, &ctrlr->ns, ns);
-	while (ns != NULL)
-	{
-		if (ns->active)
-		{
-			return ns->id;
-		}
-
-		ns = RB_NEXT(client_ns_tree, &ctrlr->ns, ns);
-	}
-
-	return 0;
-}
-
-struct spdk_client_ns *
-spdk_client_ctrlr_get_ns(struct spdk_client_ctrlr *ctrlr, uint32_t nsid)
-{
-	struct spdk_client_ns tmp;
-	struct spdk_client_ns *ns;
-
-	if (nsid < 1 || nsid > 255)
-	{
-		return NULL;
-	}
-
-	client_robust_mutex_lock(&ctrlr->ctrlr_lock);
-
-	tmp.id = nsid;
-	ns = RB_FIND(client_ns_tree, &ctrlr->ns, &tmp);
-
-	if (ns == NULL)
-	{
-		ns = spdk_zmalloc(sizeof(struct spdk_client_ns), 64, NULL, SPDK_ENV_SOCKET_ID_ANY, SPDK_MALLOC_SHARE);
-		if (ns == NULL)
-		{
-			client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
-			return NULL;
-		}
-
-		CLIENT_CTRLR_DEBUGLOG(ctrlr, "Namespace %u was added\n", nsid);
-		ns->id = nsid;
-		RB_INSERT(client_ns_tree, &ctrlr->ns, ns);
-	}
-
-	client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
-
-	return ns;
 }
 
 uint32_t

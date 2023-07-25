@@ -1661,46 +1661,21 @@ client_rdma_get_memory_translation(struct client_request *req, struct client_rdm
 	assert(rqpair);
 	assert(_ctx);
 
-	if (req->payload.opts && req->payload.opts->memory_domain)
+	rc = spdk_rdma_get_translation(rqpair->mr_map, _ctx->addr, _ctx->length, &rdma_translation);
+	if (spdk_unlikely(rc))
 	{
-		ctx.size = sizeof(struct spdk_memory_domain_translation_ctx);
-		ctx.rdma.ibv_qp = rqpair->rdma_qp->qp;
-		dma_translation.size = sizeof(struct spdk_memory_domain_translation_result);
-
-		rc = spdk_memory_domain_translate_data(req->payload.opts->memory_domain,
-											   req->payload.opts->memory_domain_ctx,
-											   rqpair->memory_domain->domain, &ctx, _ctx->addr,
-											   _ctx->length, &dma_translation);
-		if (spdk_unlikely(rc) || dma_translation.iov_count != 1)
-		{
-			SPDK_ERRLOG("DMA memory translation failed, rc %d, iov count %u\n", rc, dma_translation.iov_count);
-			return rc;
-		}
-
-		_ctx->lkey = dma_translation.rdma.lkey;
-		_ctx->rkey = dma_translation.rdma.rkey;
-		_ctx->addr = dma_translation.iov.iov_base;
-		_ctx->length = dma_translation.iov.iov_len;
+		SPDK_ERRLOG("RDMA memory translation failed, rc %d\n", rc);
+		return rc;
+	}
+	if (rdma_translation.translation_type == SPDK_RDMA_TRANSLATION_MR)
+	{
+		_ctx->lkey = rdma_translation.mr_or_key.mr->lkey;
+		_ctx->rkey = rdma_translation.mr_or_key.mr->rkey;
 	}
 	else
 	{
-		rc = spdk_rdma_get_translation(rqpair->mr_map, _ctx->addr, _ctx->length, &rdma_translation);
-		if (spdk_unlikely(rc))
-		{
-			SPDK_ERRLOG("RDMA memory translation failed, rc %d\n", rc);
-			return rc;
-		}
-		if (rdma_translation.translation_type == SPDK_RDMA_TRANSLATION_MR)
-		{
-			_ctx->lkey = rdma_translation.mr_or_key.mr->lkey;
-			_ctx->rkey = rdma_translation.mr_or_key.mr->rkey;
-		}
-		else
-		{
-			_ctx->lkey = _ctx->rkey = (uint32_t)rdma_translation.mr_or_key.key;
-		}
+		_ctx->lkey = _ctx->rkey = (uint32_t)rdma_translation.mr_or_key.key;
 	}
-
 	return 0;
 }
 
