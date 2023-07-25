@@ -111,7 +111,6 @@ enum spdk_client_data_transfer
 
 #define CLIENT_MAX_ASYNC_EVENTS (8)
 
-#define CLIENT_MAX_ADMIN_TIMEOUT_IN_SECS (30)
 
 /* Maximum log page size to fetch for AERs. */
 #define CLIENT_MAX_AER_LOG_SIZE (4096)

@@ -666,7 +666,6 @@ struct spdk_srv_rdma_poll_group
 
 struct spdk_srv_rdma_conn_sched
 {
-	struct spdk_srv_rdma_poll_group *next_admin_pg;
 	struct spdk_srv_rdma_poll_group *next_io_pg;
 };
 
@@ -4007,9 +4006,8 @@ srv_rdma_poll_group_create(struct spdk_srv_transport *transport)
 	}
 
 	TAILQ_INSERT_TAIL(&rtransport->poll_groups, rgroup, link);
-	if (rtransport->conn_sched.next_admin_pg == NULL)
+	if (rtransport->conn_sched.next_io_pg == NULL)
 	{
-		rtransport->conn_sched.next_admin_pg = rgroup;
 		rtransport->conn_sched.next_io_pg = rgroup;
 	}
 
@@ -4034,14 +4032,8 @@ srv_rdma_get_optimal_poll_group(struct spdk_srv_conn *conn)
 		return NULL;
 	}
 
-	if (conn->qid == 0)
-	{
-		pg = &rtransport->conn_sched.next_admin_pg;
-	}
-	else
-	{
-		pg = &rtransport->conn_sched.next_io_pg;
-	}
+
+	pg = &rtransport->conn_sched.next_io_pg;
 
 	assert(*pg != NULL);
 
@@ -4115,10 +4107,6 @@ srv_rdma_poll_group_destroy(struct spdk_srv_transport_poll_group *group)
 	if (next_rgroup == NULL)
 	{
 		next_rgroup = TAILQ_FIRST(&rtransport->poll_groups);
-	}
-	if (rtransport->conn_sched.next_admin_pg == rgroup)
-	{
-		rtransport->conn_sched.next_admin_pg = next_rgroup;
 	}
 	if (rtransport->conn_sched.next_io_pg == rgroup)
 	{
