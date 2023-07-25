@@ -107,14 +107,6 @@ enum spdk_client_data_transfer
 	SPDK_CLIENT_DATA_BIDIRECTIONAL = 3
 };
 
-
-
-#define CLIENT_MAX_ASYNC_EVENTS (8)
-
-
-/* Maximum log page size to fetch for AERs. */
-#define CLIENT_MAX_AER_LOG_SIZE (4096)
-
 /*
  * CLIENT_MAX_IO_QUEUES in client_spec.h defines the 64K spec-limit, but this
  *  define specifies the maximum number of queues this driver will actually
@@ -519,13 +511,6 @@ struct spdk_client_transport_poll_group
 #define CLIENT_TIMEOUT_INFINITE 0
 #define CLIENT_TIMEOUT_KEEP_EXISTING UINT64_MAX
 
-struct spdk_client_ctrlr_aer_completion_list
-{
-	struct spdk_req_cpl cpl;
-	STAILQ_ENTRY(spdk_client_ctrlr_aer_completion_list)
-	link;
-};
-
 /*
  * Used to track properties for all processes accessing the controller.
  */
@@ -554,9 +539,6 @@ struct spdk_client_ctrlr_process
 	TAILQ_HEAD(, spdk_client_qpair)
 	allocated_io_qpairs;
 
-	spdk_client_aer_cb aer_cb_fn;
-	void *aer_cb_arg;
-
 	/**
 	 * A function pointer to timeout callback function
 	 */
@@ -564,11 +546,6 @@ struct spdk_client_ctrlr_process
 	void *timeout_cb_arg;
 	/** separate timeout values for io vs. admin reqs */
 	uint64_t timeout_io_ticks;
-	uint64_t timeout_admin_ticks;
-
-	/** List to publish AENs to all procs in multiprocess setup */
-	STAILQ_HEAD(, spdk_client_ctrlr_aer_completion_list)
-	async_events;
 };
 
 #define SPDK_CLIENT_MAX_OPC 0xff
@@ -708,10 +685,6 @@ struct client_driver
 	int hotplug_fd;
 };
 
-extern struct client_driver *g_spdk_client_driver;
-
-int client_driver_init(void);
-
 #define client_delay usleep
 
 /**
@@ -768,7 +741,6 @@ void client_ctrlr_fail(struct spdk_client_ctrlr *ctrlr, bool hot_remove);
 void client_ctrlr_process_async_event(struct spdk_client_ctrlr *ctrlr,
 									  const struct spdk_req_cpl *cpl);
 void client_ctrlr_disconnect_qpair(struct spdk_client_qpair *qpair);
-void client_ctrlr_complete_queued_async_events(struct spdk_client_ctrlr *ctrlr);
 int client_qpair_init(struct spdk_client_qpair *qpair, uint16_t id,
 					  struct spdk_client_ctrlr *ctrlr,
 					  enum spdk_client_qprio qprio,
@@ -847,10 +819,6 @@ client_allocate_request_null(struct spdk_client_qpair *qpair, spdk_req_cmd_cb cb
 {
 	return client_allocate_request_contig(qpair, NULL, 0, cb_fn, cb_arg);
 }
-
-struct client_request *client_allocate_request_user_copy(struct spdk_client_qpair *qpair,
-														 void *buffer, uint32_t payload_size,
-														 spdk_req_cmd_cb cb_fn, void *cb_arg, bool host_to_controller);
 
 static inline void
 client_complete_request(spdk_req_cmd_cb cb_fn, void *cb_arg, struct spdk_client_qpair *qpair,

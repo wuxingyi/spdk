@@ -774,7 +774,6 @@ int client_ctrlr_add_process(struct spdk_client_ctrlr *ctrlr, void *devhandle)
 	ctrlr_proc->devhandle = devhandle;
 	ctrlr_proc->ref = 0;
 	TAILQ_INIT(&ctrlr_proc->allocated_io_qpairs);
-	STAILQ_INIT(&ctrlr_proc->async_events);
 
 	TAILQ_INSERT_TAIL(&ctrlr->active_procs, ctrlr_proc, tailq);
 

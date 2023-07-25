@@ -1119,30 +1119,6 @@ extern "C"
 	typedef void (*spdk_req_cmd_cb)(void *ctx, const struct spdk_req_cpl *cpl);
 
 	/**
-	 * Signature for callback function invoked when an asynchronous error request
-	 * command is completed.
-	 *
-	 * \param aer_cb_arg Context specified by spdk_client_register_aer_callback().
-	 * \param cpl Completion queue entry that contains the completion status
-	 * of the asynchronous event request that was completed.
-	 */
-	typedef void (*spdk_client_aer_cb)(void *aer_cb_arg,
-									   const struct spdk_req_cpl *cpl);
-
-	/**
-	 * Register callback function invoked when an AER command is completed for the
-	 * given Client controller.
-	 *
-	 * \param ctrlr Opaque handle to Client controller.
-	 * \param aer_cb_fn Callback function invoked when an asynchronous error request
-	 * command is completed.
-	 * \param aer_cb_arg Argument passed to callback function.
-	 */
-	void spdk_client_ctrlr_register_aer_callback(struct spdk_client_ctrlr *ctrlr,
-												 spdk_client_aer_cb aer_cb_fn,
-												 void *aer_cb_arg);
-
-	/**
 	 * Opaque handle to a queue pair.
 	 *
 	 * I/O queue pairs may be allocated using spdk_client_ctrlr_alloc_io_qpair().
