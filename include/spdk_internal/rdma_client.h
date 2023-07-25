@@ -928,50 +928,6 @@ enum spdk_client_path_status_code
 
 #define SPDK_CLIENT_MAX_OPC 0xff
 
-/**
- * Admin opcodes
- */
-enum spdk_client_admin_opcode
-{
-	SPDK_CLIENT_OPC_DELETE_IO_SQ = 0x00,
-	SPDK_CLIENT_OPC_CREATE_IO_SQ = 0x01,
-	SPDK_CLIENT_OPC_GET_LOG_PAGE = 0x02,
-	/* 0x03 - reserved */
-	SPDK_CLIENT_OPC_DELETE_IO_CQ = 0x04,
-	SPDK_CLIENT_OPC_CREATE_IO_CQ = 0x05,
-	SPDK_CLIENT_OPC_IDENTIFY = 0x06,
-	/* 0x07 - reserved */
-	SPDK_CLIENT_OPC_ABORT = 0x08,
-	SPDK_CLIENT_OPC_SET_FEATURES = 0x09,
-	SPDK_CLIENT_OPC_GET_FEATURES = 0x0a,
-	/* 0x0b - reserved */
-	SPDK_CLIENT_OPC_ASYNC_EVENT_REQUEST = 0x0c,
-	SPDK_CLIENT_OPC_NS_MANAGEMENT = 0x0d,
-	/* 0x0e-0x0f - reserved */
-	SPDK_CLIENT_OPC_FIRMWARE_COMMIT = 0x10,
-	SPDK_CLIENT_OPC_FIRMWARE_IMAGE_DOWNLOAD = 0x11,
-
-	SPDK_CLIENT_OPC_DEVICE_SELF_TEST = 0x14,
-	SPDK_CLIENT_OPC_NS_ATTACHMENT = 0x15,
-
-	SPDK_CLIENT_OPC_DIRECTIVE_SEND = 0x19,
-	SPDK_CLIENT_OPC_DIRECTIVE_RECEIVE = 0x1a,
-
-	SPDK_CLIENT_OPC_VIRTUALIZATION_MANAGEMENT = 0x1c,
-	SPDK_CLIENT_OPC_CLIENT_MI_SEND = 0x1d,
-	SPDK_CLIENT_OPC_CLIENT_MI_RECEIVE = 0x1e,
-
-	SPDK_CLIENT_OPC_DOORBELL_BUFFER_CONFIG = 0x7c,
-
-	SPDK_CLIENT_OPC_FORMAT_NVM = 0x80,
-	SPDK_CLIENT_OPC_SECURITY_SEND = 0x81,
-	SPDK_CLIENT_OPC_SECURITY_RECEIVE = 0x82,
-
-	SPDK_CLIENT_OPC_SANITIZE = 0x84,
-
-	SPDK_CLIENT_OPC_GET_LBA_STATUS = 0x86,
-};
-
 struct spdk_client_ns_list
 {
 	uint32_t ns_list[1024];
@@ -1522,7 +1478,6 @@ int client_transport_ctrlr_connect_qpair_async(struct spdk_client_ctrlr *ctrlr,
 											   struct spdk_client_qpair *qpair);
 void client_transport_ctrlr_disconnect_qpair(struct spdk_client_ctrlr *ctrlr,
 											 struct spdk_client_qpair *qpair);
-void client_transport_qpair_abort_reqs(struct spdk_client_qpair *qpair, uint32_t dnr);
 int client_transport_qpair_reset(struct spdk_client_qpair *qpair);
 int client_transport_qpair_submit_request(struct spdk_client_qpair *qpair, struct client_request *req);
 int32_t client_transport_qpair_process_completions(struct spdk_client_qpair *qpair,

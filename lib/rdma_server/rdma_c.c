@@ -2985,30 +2985,6 @@ client_rdma_qpair_iterate_requests(struct spdk_client_qpair *qpair,
 	return 0;
 }
 
-static void
-client_rdma_admin_qpair_abort_aers(struct spdk_client_qpair *qpair)
-{
-	struct spdk_client_rdma_req *rdma_req, *tmp;
-	struct spdk_req_cpl cpl;
-	struct client_rdma_qpair *rqpair = client_rdma_qpair(qpair);
-
-	cpl.status.sc = SPDK_CLIENT_SC_ABORTED_SQ_DELETION;
-	cpl.status.sct = SPDK_CLIENT_SCT_GENERIC;
-
-	TAILQ_FOREACH_SAFE(rdma_req, &rqpair->outstanding_reqs, link, tmp)
-	{
-		assert(rdma_req->req != NULL);
-
-		if (rdma_req->req->cmd.opc != SPDK_CLIENT_OPC_ASYNC_EVENT_REQUEST)
-		{
-			continue;
-		}
-
-		client_rdma_req_complete(rdma_req, &cpl);
-		client_rdma_req_put(rqpair, rdma_req);
-	}
-}
-
 static int
 client_rdma_poller_create(struct client_rdma_poll_group *group, struct ibv_context *ctx)
 {
@@ -3524,7 +3500,6 @@ const struct spdk_client_transport_ops rdma_trans_ops = {
 	.qpair_submit_request = client_rdma_qpair_submit_request,
 	.qpair_process_completions = client_rdma_qpair_process_completions,
 	.qpair_iterate_requests = client_rdma_qpair_iterate_requests,
-	.admin_qpair_abort_aers = client_rdma_admin_qpair_abort_aers,
 
 	.poll_group_create = client_rdma_poll_group_create,
 	.poll_group_connect_qpair = client_rdma_poll_group_connect_qpair,
