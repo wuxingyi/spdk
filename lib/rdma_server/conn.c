@@ -344,66 +344,6 @@ void spdk_client_qpair_print_completion(struct spdk_client_qpair *qpair, struct 
 	spdk_client_print_completion(qpair->id, cpl);
 }
 
-bool client_completion_is_retry(const struct spdk_req_cpl *cpl)
-{
-	/*
-	 * TODO: spec is not clear how commands that are aborted due
-	 *  to TLER will be marked.  So for now, it seems
-	 *  NAMESPACE_NOT_READY is the only case where we should
-	 *  look at the DNR bit.
-	 */
-	switch ((int)cpl->status.sct)
-	{
-	case SPDK_CLIENT_SCT_GENERIC:
-		switch ((int)cpl->status.sc)
-		{
-		case SPDK_CLIENT_SC_NAMESPACE_NOT_READY:
-		case SPDK_CLIENT_SC_FORMAT_IN_PROGRESS:
-			if (cpl->status.dnr)
-			{
-				return false;
-			}
-			else
-			{
-				return true;
-			}
-		case SPDK_CLIENT_SC_INVALID_OPCODE:
-		case SPDK_CLIENT_SC_INVALID_FIELD:
-		case SPDK_CLIENT_SC_COMMAND_ID_CONFLICT:
-		case SPDK_CLIENT_SC_DATA_TRANSFER_ERROR:
-		case SPDK_CLIENT_SC_ABORTED_POWER_LOSS:
-		case SPDK_CLIENT_SC_INTERNAL_DEVICE_ERROR:
-		case SPDK_CLIENT_SC_ABORTED_BY_REQUEST:
-		case SPDK_CLIENT_SC_ABORTED_SQ_DELETION:
-		case SPDK_CLIENT_SC_ABORTED_FAILED_FUSED:
-		case SPDK_CLIENT_SC_ABORTED_MISSING_FUSED:
-		case SPDK_CLIENT_SC_INVALID_NAMESPACE_OR_FORMAT:
-		case SPDK_CLIENT_SC_COMMAND_SEQUENCE_ERROR:
-		case SPDK_CLIENT_SC_LBA_OUT_OF_RANGE:
-		case SPDK_CLIENT_SC_CAPACITY_EXCEEDED:
-		default:
-			return false;
-		}
-	case SPDK_CLIENT_SCT_PATH:
-		/*
-		 * Per Client TP 4028 (Path and Transport Error Enhancements), retries should be
-		 * based on the setting of the DNR bit for Internal Path Error
-		 */
-		switch ((int)cpl->status.sc)
-		{
-		case SPDK_CLIENT_SC_INTERNAL_PATH_ERROR:
-			return !cpl->status.dnr;
-		default:
-			return false;
-		}
-	case SPDK_CLIENT_SCT_COMMAND_SPECIFIC:
-	case SPDK_CLIENT_SCT_MEDIA_ERROR:
-	case SPDK_CLIENT_SCT_VENDOR_SPECIFIC:
-	default:
-		return false;
-	}
-}
-
 static void
 client_qpair_manual_complete_request(struct spdk_client_qpair *qpair,
 									 struct client_request *req, uint32_t sct, uint32_t sc,

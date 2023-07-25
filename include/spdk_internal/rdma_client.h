@@ -1162,11 +1162,6 @@ int client_request_check_timeout(struct client_request *req, uint16_t cid,
 int client_robust_mutex_init_shared(pthread_mutex_t *mtx);
 int client_robust_mutex_init_recursive_shared(pthread_mutex_t *mtx);
 
-bool client_completion_is_retry(const struct spdk_req_cpl *cpl);
-
-struct spdk_client_ctrlr *client_get_ctrlr_by_trid_unsafe(
-	const struct spdk_client_transport_id *trid);
-
 const struct spdk_client_transport *client_get_transport(const char *transport_name);
 const struct spdk_client_transport *client_get_first_transport(void);
 const struct spdk_client_transport *client_get_next_transport(const struct spdk_client_transport
@@ -1178,8 +1173,6 @@ struct spdk_client_ctrlr *client_transport_ctrlr_construct(const char *trstring,
 														   const struct spdk_client_ctrlr_opts *opts,
 														   void *devhandle);
 int client_transport_ctrlr_destruct(struct spdk_client_ctrlr *ctrlr);
-int client_transport_ctrlr_scan(struct spdk_client_probe_ctx *probe_ctx, bool direct_connect);
-int client_transport_ctrlr_enable(struct spdk_client_ctrlr *ctrlr);
 
 uint32_t client_transport_ctrlr_get_max_xfer_size(struct spdk_client_ctrlr *ctrlr);
 uint16_t client_transport_ctrlr_get_max_sges(struct spdk_client_ctrlr *ctrlr);
