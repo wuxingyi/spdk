@@ -902,6 +902,7 @@ client_rdma_qpair_init(struct client_rdma_qpair *rqpair)
 		return -1;
 	}
 
+	//(fixme wuxingyi) seems of no use
 	rqpair->memory_domain = client_rdma_get_memory_domain(rqpair->rdma_qp->qp->pd);
 	if (!rqpair->memory_domain)
 	{

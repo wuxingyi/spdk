@@ -651,23 +651,6 @@ void client_qpair_abort_all_queued_reqs(struct spdk_client_qpair *qpair, uint32_
 	_client_qpair_complete_abort_queued_reqs(qpair);
 }
 
-void spdk_client_qpair_remove_cmd_error_injection(struct spdk_client_ctrlr *ctrlr,
-												  struct spdk_client_qpair *qpair,
-												  uint8_t opc)
-{
-	struct client_error_cmd *cmd, *entry;
-
-	TAILQ_FOREACH_SAFE(cmd, &qpair->err_cmd_head, link, entry)
-	{
-		if (cmd->opc == opc)
-		{
-			TAILQ_REMOVE(&qpair->err_cmd_head, cmd, link);
-			spdk_free(cmd);
-			break;
-		}
-	}
-}
-
 uint16_t
 spdk_client_qpair_get_id(struct spdk_client_qpair *qpair)
 {

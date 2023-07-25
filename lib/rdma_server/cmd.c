@@ -423,38 +423,6 @@ int spdk_client_ns_cmd_write(struct spdk_client_qpair *qpair,
 	}
 }
 
-int spdk_client_ns_cmd_write_with_md(struct spdk_client_qpair *qpair,
-									 void *buffer, void *metadata, uint64_t lba,
-									 uint32_t lba_count, spdk_req_cmd_cb cb_fn, void *cb_arg,
-									 uint32_t io_flags, uint16_t apptag_mask, uint16_t apptag)
-{
-	struct client_request *req;
-	struct client_payload payload;
-	int rc = 0;
-
-	if (!_is_io_flags_valid(io_flags))
-	{
-		return -EINVAL;
-	}
-
-	payload = CLIENT_PAYLOAD_CONTIG(buffer, metadata);
-
-	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_WRITE,
-							io_flags, apptag_mask, apptag, false, &rc);
-	if (req != NULL)
-	{
-		return client_qpair_submit_request(qpair, req);
-	}
-	else
-	{
-		return client_ns_map_failure_rc(lba_count,
-										qpair->ctrlr->opts.sectors_per_max_io,
-										qpair->ctrlr->opts.sectors_per_stripe,
-										qpair->ctrlr->opts.io_queue_requests,
-										rc);
-	}
-}
-
 int spdk_client_ns_cmd_writev(struct spdk_client_qpair *qpair,
 							  uint64_t lba, uint32_t lba_count,
 							  spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t io_flags,
@@ -486,24 +454,6 @@ int spdk_client_ns_cmd_writev(struct spdk_client_qpair *qpair,
 										qpair->ctrlr->opts.io_queue_requests,
 										rc);
 	}
-}
-
-int spdk_client_ns_cmd_flush(struct spdk_client_qpair *qpair,
-							 spdk_req_cmd_cb cb_fn, void *cb_arg)
-{
-	struct client_request *req;
-	struct spdk_req_cmd *cmd;
-
-	req = client_allocate_request_null(qpair, cb_fn, cb_arg);
-	if (req == NULL)
-	{
-		return -ENOMEM;
-	}
-
-	cmd = &req->cmd;
-	cmd->opc = SPDK_CLIENT_OPC_FLUSH;
-
-	return client_qpair_submit_request(qpair, req);
 }
 
 void rpc_reclaim_out_iovs(struct rpc_request *req)
