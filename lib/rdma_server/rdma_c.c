@@ -1634,7 +1634,8 @@ client_rdma_ctrlr_connect_qpair_poll(struct spdk_client_ctrlr *ctrlr, struct spd
 		break;
 	case CLIENT_RDMA_QPAIR_STATE_RUNNING:
 		client_qpair_set_state(qpair, CLIENT_QPAIR_CONNECTED);
-		qpair->cb(qpair->cb_args, 0);
+		if (qpair->cb)
+			qpair->cb(qpair->cb_args, 0);
 		rc = 0;
 		break;
 	default:

@@ -503,7 +503,7 @@ rdma_poll(void *arg)
 		{
 			now = spdk_get_ticks();
 			avg_ns = (now - g_last_ticks) * SPDK_SEC_TO_NSEC / spdk_get_ticks_hz() / g_worker_fun_cnt;
-			SPDK_ERRLOG("avg_ns = %ld\n", avg_ns);
+			// SPDK_ERRLOG("avg_ns = %ld\n", avg_ns);
 			g_last_ticks = now;
 			g_worker_fun_cnt = 0;
 		}
