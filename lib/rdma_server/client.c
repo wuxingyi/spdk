@@ -114,10 +114,6 @@ void spdk_client_ctrlr_get_default_ctrlr_opts(struct spdk_client_ctrlr_opts *opt
 	SET_FIELD(num_io_queues, DEFAULT_MAX_IO_QUEUES);
 	SET_FIELD(use_cmb_sqs, false);
 	SET_FIELD(no_shn_notification, false);
-	SET_FIELD(arbitration_burst, 0);
-	SET_FIELD(low_priority_weight, 0);
-	SET_FIELD(medium_priority_weight, 0);
-	SET_FIELD(high_priority_weight, 0);
 	SET_FIELD(keep_alive_timeout_ms, MIN_KEEP_ALIVE_TIMEOUT_IN_MS);
 	SET_FIELD(transport_retry_count, SPDK_CLIENT_DEFAULT_RETRY_COUNT);
 	SET_FIELD(io_queue_size, DEFAULT_IO_QUEUE_SIZE);
@@ -142,7 +138,6 @@ void spdk_client_ctrlr_get_default_ctrlr_opts(struct spdk_client_ctrlr_opts *opt
 	}
 
 	SET_FIELD(command_set, CHAR_BIT);
-	SET_FIELD(admin_timeout_ms, CLIENT_MAX_ADMIN_TIMEOUT_IN_SECS * 1000);
 	SET_FIELD(header_digest, false);
 	SET_FIELD(data_digest, false);
 	SET_FIELD(disable_error_logging, false);

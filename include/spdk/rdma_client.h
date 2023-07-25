@@ -140,18 +140,6 @@ extern "C"
 	SPDK_STATIC_ASSERT(sizeof(struct spdk_client_format) == 4, "Incorrect size");
 
 	/**
-	 * Arbitration Mechanism Selected to the controller.
-	 *
-	 * Value 0x2 to 0x6 is reserved.
-	 */
-	enum spdk_client_cc_ams
-	{
-		SPDK_CLIENT_CC_AMS_RR = 0x0,  /**< default round robin */
-		SPDK_CLIENT_CC_AMS_WRR = 0x1, /**< weighted round robin */
-		SPDK_CLIENT_CC_AMS_VS = 0x7,  /**< vendor specific */
-	};
-
-	/**
 	 * Client controller initialization options.
 	 *
 	 * A pointer to this structure will be provided for each probe callback from spdk_client_probe() to
@@ -175,40 +163,7 @@ extern "C"
 		 */
 		bool no_shn_notification;
 
-		/**
-		 * Type of arbitration mechanism
-		 */
-		enum spdk_client_cc_ams arb_mechanism;
-
-		/**
-		 * Maximum number of commands that the controller may launch at one time.  The
-		 * value is expressed as a power of two, valid values are from 0-7, and 7 means
-		 * unlimited.
-		 */
-		uint8_t arbitration_burst;
-
-		/**
-		 * Number of commands that may be executed from the low priority queue in each
-		 * arbitration round.  This field is only valid when arb_mechanism is set to
-		 * SPDK_CLIENT_CC_AMS_WRR (weighted round robin).
-		 */
-		uint8_t low_priority_weight;
-
-		/**
-		 * Number of commands that may be executed from the medium priority queue in each
-		 * arbitration round.  This field is only valid when arb_mechanism is set to
-		 * SPDK_CLIENT_CC_AMS_WRR (weighted round robin).
-		 */
-		uint8_t medium_priority_weight;
-
-		/**
-		 * Number of commands that may be executed from the high priority queue in each
-		 * arbitration round.  This field is only valid when arb_mechanism is set to
-		 * SPDK_CLIENT_CC_AMS_WRR (weighted round robin).
-		 */
-		uint8_t high_priority_weight;
-
-		/**
+				/**
 		 * Keep alive timeout in milliseconds (0 = disabled).
 		 *
 		 * The Client library will set the Keep Alive Timer feature to this value and automatically
