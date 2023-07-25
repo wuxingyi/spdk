@@ -73,8 +73,6 @@ pid_t g_spdk_client_pid;
  */
 void spdk_client_ctrlr_get_default_ctrlr_opts(struct spdk_client_ctrlr_opts *opts, size_t opts_size)
 {
-	char host_id_str[SPDK_UUID_STRING_LEN];
-
 	assert(opts);
 
 	opts->opts_size = opts_size;
@@ -672,8 +670,6 @@ static void
 client_ctrlr_shutdown_async(struct spdk_client_ctrlr *ctrlr,
 							struct client_ctrlr_detach_ctx *ctx)
 {
-	int rc;
-
 	if (ctrlr->is_removed)
 	{
 		ctx->shutdown_complete = true;
@@ -1045,7 +1041,7 @@ int client_ctrlr_construct(struct spdk_client_ctrlr *ctrlr)
 
 	ctrlr->free_io_qids = spdk_bit_array_create(ctrlr->opts.num_io_queues + 1);
 
-	for (int i = 1; i <= ctrlr->opts.num_io_queues; i++)
+	for (uint32_t i = 1; i <= ctrlr->opts.num_io_queues; i++)
 	{
 		spdk_client_ctrlr_free_qid(ctrlr, i);
 	}
@@ -1133,28 +1129,6 @@ void client_ctrlr_destruct(struct spdk_client_ctrlr *ctrlr)
 		}
 		client_delay(1000);
 	}
-}
-
-void spdk_client_ctrlr_register_timeout_callback(struct spdk_client_ctrlr *ctrlr,
-												 uint64_t timeout_io_us, uint64_t timeout_admin_us,
-												 spdk_client_timeout_cb cb_fn, void *cb_arg)
-{
-	struct spdk_client_ctrlr_process *active_proc;
-
-	client_robust_mutex_lock(&ctrlr->ctrlr_lock);
-
-	active_proc = client_ctrlr_get_current_process(ctrlr);
-	if (active_proc)
-	{
-		active_proc->timeout_io_ticks = timeout_io_us * spdk_get_ticks_hz() / 1000000ULL;
-		active_proc->timeout_admin_ticks = timeout_admin_us * spdk_get_ticks_hz() / 1000000ULL;
-		active_proc->timeout_cb_fn = cb_fn;
-		active_proc->timeout_cb_arg = cb_arg;
-	}
-
-	ctrlr->timeout_enabled = true;
-
-	client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
 }
 
 int client_request_check_timeout(struct client_request *req, uint16_t cid,
