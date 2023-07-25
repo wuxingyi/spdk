@@ -41,7 +41,6 @@
 #include "spdk/endian.h"
 #include "spdk/rdma_common.h"
 
-struct client_active_ns_ctx;
 pid_t g_spdk_client_pid;
 
 #define CTRLR_STRING(ctrlr) \
@@ -744,115 +743,6 @@ client_ctrlr_enable(struct spdk_client_ctrlr *ctrlr)
 	return 0;
 }
 
-static const char *
-client_ctrlr_state_string(enum client_ctrlr_state state)
-{
-	switch (state)
-	{
-	case CLIENT_CTRLR_STATE_INIT_DELAY:
-		return "delay init";
-	case CLIENT_CTRLR_STATE_CONNECT_ADMINQ:
-		return "connect adminq";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_CONNECT_ADMINQ:
-		return "wait for connect adminq";
-	case CLIENT_CTRLR_STATE_READ_VS:
-		return "read vs";
-	case CLIENT_CTRLR_STATE_READ_VS_WAIT_FOR_VS:
-		return "read vs wait for vs";
-	case CLIENT_CTRLR_STATE_READ_CAP:
-		return "read cap";
-	case CLIENT_CTRLR_STATE_READ_CAP_WAIT_FOR_CAP:
-		return "read cap wait for cap";
-	case CLIENT_CTRLR_STATE_CHECK_EN:
-		return "check en";
-	case CLIENT_CTRLR_STATE_CHECK_EN_WAIT_FOR_CC:
-		return "check en wait for cc";
-	case CLIENT_CTRLR_STATE_DISABLE_WAIT_FOR_READY_1:
-		return "disable and wait for CSTS.RDY = 1";
-	case CLIENT_CTRLR_STATE_DISABLE_WAIT_FOR_READY_1_WAIT_FOR_CSTS:
-		return "disable and wait for CSTS.RDY = 1 reg";
-	case CLIENT_CTRLR_STATE_SET_EN_0:
-		return "set CC.EN = 0";
-	case CLIENT_CTRLR_STATE_SET_EN_0_WAIT_FOR_CC:
-		return "set CC.EN = 0 wait for cc";
-	case CLIENT_CTRLR_STATE_DISABLE_WAIT_FOR_READY_0:
-		return "disable and wait for CSTS.RDY = 0";
-	case CLIENT_CTRLR_STATE_DISABLE_WAIT_FOR_READY_0_WAIT_FOR_CSTS:
-		return "disable and wait for CSTS.RDY = 0 reg";
-	case CLIENT_CTRLR_STATE_ENABLE:
-		return "enable controller by writing CC.EN = 1";
-	case CLIENT_CTRLR_STATE_ENABLE_WAIT_FOR_CC:
-		return "enable controller by writing CC.EN = 1 reg";
-	case CLIENT_CTRLR_STATE_ENABLE_WAIT_FOR_READY_1:
-		return "wait for CSTS.RDY = 1";
-	case CLIENT_CTRLR_STATE_ENABLE_WAIT_FOR_READY_1_WAIT_FOR_CSTS:
-		return "wait for CSTS.RDY = 1 reg";
-	case CLIENT_CTRLR_STATE_RESET_ADMIN_QUEUE:
-		return "reset admin queue";
-	case CLIENT_CTRLR_STATE_IDENTIFY:
-		return "identify controller";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY:
-		return "wait for identify controller";
-	case CLIENT_CTRLR_STATE_CONFIGURE_AER:
-		return "configure AER";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_CONFIGURE_AER:
-		return "wait for configure aer";
-	case CLIENT_CTRLR_STATE_SET_KEEP_ALIVE_TIMEOUT:
-		return "set keep alive timeout";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_KEEP_ALIVE_TIMEOUT:
-		return "wait for set keep alive timeout";
-	case CLIENT_CTRLR_STATE_IDENTIFY_IOCS_SPECIFIC:
-		return "identify controller iocs specific";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY_IOCS_SPECIFIC:
-		return "wait for identify controller iocs specific";
-	case CLIENT_CTRLR_STATE_GET_ZNS_CMD_EFFECTS_LOG:
-		return "get zns cmd and effects log page";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_GET_ZNS_CMD_EFFECTS_LOG:
-		return "wait for get zns cmd and effects log page";
-	case CLIENT_CTRLR_STATE_SET_NUM_QUEUES:
-		return "set number of queues";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_SET_NUM_QUEUES:
-		return "wait for set number of queues";
-	case CLIENT_CTRLR_STATE_IDENTIFY_ACTIVE_NS:
-		return "identify active ns";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY_ACTIVE_NS:
-		return "wait for identify active ns";
-	case CLIENT_CTRLR_STATE_IDENTIFY_NS:
-		return "identify ns";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY_NS:
-		return "wait for identify ns";
-	case CLIENT_CTRLR_STATE_IDENTIFY_ID_DESCS:
-		return "identify namespace id descriptors";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY_ID_DESCS:
-		return "wait for identify namespace id descriptors";
-	case CLIENT_CTRLR_STATE_IDENTIFY_NS_IOCS_SPECIFIC:
-		return "identify ns iocs specific";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY_NS_IOCS_SPECIFIC:
-		return "wait for identify ns iocs specific";
-	case CLIENT_CTRLR_STATE_SET_SUPPORTED_LOG_PAGES:
-		return "set supported log pages";
-	case CLIENT_CTRLR_STATE_SET_SUPPORTED_INTEL_LOG_PAGES:
-		return "set supported INTEL log pages";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_SUPPORTED_INTEL_LOG_PAGES:
-		return "wait for supported INTEL log pages";
-	case CLIENT_CTRLR_STATE_SET_SUPPORTED_FEATURES:
-		return "set supported features";
-	case CLIENT_CTRLR_STATE_SET_DB_BUF_CFG:
-		return "set doorbell buffer config";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_DB_BUF_CFG:
-		return "wait for doorbell buffer config";
-	case CLIENT_CTRLR_STATE_SET_HOST_ID:
-		return "set host ID";
-	case CLIENT_CTRLR_STATE_WAIT_FOR_HOST_ID:
-		return "wait for set host ID";
-	case CLIENT_CTRLR_STATE_READY:
-		return "ready";
-	case CLIENT_CTRLR_STATE_ERROR:
-		return "error";
-	}
-	return "unknown";
-};
-
 static void
 client_ctrlr_abort_queued_aborts(struct spdk_client_ctrlr *ctrlr)
 {
@@ -912,27 +802,6 @@ int spdk_client_ctrlr_disconnect(struct spdk_client_ctrlr *ctrlr)
 	client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
 	return 0;
 }
-
-enum client_active_ns_state
-{
-	CLIENT_ACTIVE_NS_STATE_IDLE,
-	CLIENT_ACTIVE_NS_STATE_PROCESSING,
-	CLIENT_ACTIVE_NS_STATE_DONE,
-	CLIENT_ACTIVE_NS_STATE_ERROR
-};
-
-typedef void (*client_active_ns_ctx_deleter)(struct client_active_ns_ctx *);
-
-struct client_active_ns_ctx
-{
-	struct spdk_client_ctrlr *ctrlr;
-	uint32_t page_count;
-	uint32_t next_nsid;
-	uint32_t *new_ns_list;
-	client_active_ns_ctx_deleter deleter;
-
-	enum client_active_ns_state state;
-};
 
 struct spdk_client_ctrlr_process *
 client_ctrlr_get_process(struct spdk_client_ctrlr *ctrlr, pid_t pid)

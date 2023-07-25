@@ -684,7 +684,6 @@ _srv_request_complete(void *ctx)
 	struct spdk_req_cpl *rsp = req->rsp;
 	struct spdk_srv_conn *conn;
 	struct spdk_srv_subsystem_poll_group *sgroup = NULL;
-	struct spdk_srv_subsystem_pg_ns_info *ns_info;
 	bool is_aer = false;
 	uint32_t nsid;
 	bool paused;

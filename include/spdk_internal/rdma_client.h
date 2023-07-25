@@ -677,39 +677,9 @@ enum client_ctrlr_state
 	CLIENT_CTRLR_STATE_WAIT_FOR_SET_NUM_QUEUES,
 
 	/**
-	 * Get active Namespace list of the controller.
-	 */
-	CLIENT_CTRLR_STATE_IDENTIFY_ACTIVE_NS,
-
-	/**
-	 * Waiting for the Identify Active Namespace commands to be completed.
-	 */
-	CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY_ACTIVE_NS,
-
-	/**
-	 * Get Identify Namespace Data structure for each NS.
-	 */
-	CLIENT_CTRLR_STATE_IDENTIFY_NS,
-
-	/**
-	 * Waiting for the Identify Namespace commands to be completed.
-	 */
-	CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY_NS,
-
-	/**
 	 * Get Identify Namespace Identification Descriptors.
 	 */
 	CLIENT_CTRLR_STATE_IDENTIFY_ID_DESCS,
-
-	/**
-	 * Get Identify I/O Command Set Specific Namespace data structure for each NS.
-	 */
-	CLIENT_CTRLR_STATE_IDENTIFY_NS_IOCS_SPECIFIC,
-
-	/**
-	 * Waiting for the Identify I/O Command Set Specific Namespace commands to be completed.
-	 */
-	CLIENT_CTRLR_STATE_WAIT_FOR_IDENTIFY_NS_IOCS_SPECIFIC,
 
 	/**
 	 * Waiting for the Identify Namespace Identification

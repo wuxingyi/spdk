@@ -36,15 +36,6 @@
 #include "spdk/rdma_client.h"
 #include "spdk_internal/rdma_client.h"
 
-static void print_time_cost_for_rpc_req(struct rpc_request *req, const char *func_name)
-{
-	uint64_t now, passed;
-	now = spdk_get_ticks();
-	passed = now - req->tsc_last;
-	req->tsc_last = now;
-	SPDK_DEBUGLOG(rdma, "time passed %ld us at %s\n", passed * SPDK_SEC_TO_USEC / spdk_get_ticks_hz(), func_name);
-}
-
 static inline struct client_request *_client_ns_cmd_rw(
 	struct spdk_client_qpair *qpair,
 	const struct client_payload *payload, uint32_t payload_offset, uint32_t md_offset,
