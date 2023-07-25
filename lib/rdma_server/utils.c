@@ -39,27 +39,11 @@ int spdk_client_transport_id_parse_trtype(enum spdk_client_transport_type *trtyp
 	{
 		return -EINVAL;
 	}
-
-	if (strcasecmp(str, "PCIe") == 0)
-	{
-		*trtype = SPDK_CLIENT_TRANSPORT_PCIE;
-	}
 	else if (strcasecmp(str, "RDMA") == 0)
 	{
 		*trtype = SPDK_CLIENT_TRANSPORT_RDMA;
 	}
-	else if (strcasecmp(str, "TCP") == 0)
-	{
-		*trtype = SPDK_CLIENT_TRANSPORT_TCP;
-	}
-	else if (strcasecmp(str, "VFIOUSER") == 0)
-	{
-		*trtype = SPDK_CLIENT_TRANSPORT_VFIOUSER;
-	}
-	else
-	{
-		*trtype = SPDK_CLIENT_TRANSPORT_CUSTOM;
-	}
+
 	return 0;
 }
 
@@ -68,16 +52,8 @@ spdk_client_transport_id_trtype_str(enum spdk_client_transport_type trtype)
 {
 	switch (trtype)
 	{
-	case SPDK_CLIENT_TRANSPORT_PCIE:
-		return "PCIe";
 	case SPDK_CLIENT_TRANSPORT_RDMA:
 		return "RDMA";
-	case SPDK_CLIENT_TRANSPORT_TCP:
-		return "TCP";
-	case SPDK_CLIENT_TRANSPORT_VFIOUSER:
-		return "VFIOUSER";
-	case SPDK_CLIENT_TRANSPORT_CUSTOM:
-		return "CUSTOM";
 	default:
 		return NULL;
 	}
@@ -404,34 +380,10 @@ int spdk_client_transport_id_compare(const struct spdk_client_transport_id *trid
 {
 	int cmp;
 
-	if (trid1->trtype == SPDK_CLIENT_TRANSPORT_CUSTOM)
-	{
-		cmp = strcasecmp(trid1->trstring, trid2->trstring);
-	}
-	else
-	{
-		cmp = cmp_int(trid1->trtype, trid2->trtype);
-	}
-
+	cmp = cmp_int(trid1->trtype, trid2->trtype);
 	if (cmp)
 	{
 		return cmp;
-	}
-
-	if (trid1->trtype == SPDK_CLIENT_TRANSPORT_PCIE)
-	{
-		struct spdk_pci_addr pci_addr1 = {};
-		struct spdk_pci_addr pci_addr2 = {};
-
-		/* Normalize PCI addresses before comparing */
-		if (spdk_pci_addr_parse(&pci_addr1, trid1->traddr) < 0 ||
-			spdk_pci_addr_parse(&pci_addr2, trid2->traddr) < 0)
-		{
-			return -1;
-		}
-
-		/* PCIe transport ID only uses trtype and traddr */
-		return spdk_pci_addr_compare(&pci_addr1, &pci_addr2);
 	}
 
 	cmp = strcasecmp(trid1->traddr, trid2->traddr);

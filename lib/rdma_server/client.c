@@ -111,13 +111,9 @@ void spdk_client_ctrlr_get_default_ctrlr_opts(struct spdk_client_ctrlr_opts *opt
 		memset(opts->host_id, 0, sizeof(opts->host_id));
 	}
 
-	SET_FIELD(command_set, CHAR_BIT);
-	SET_FIELD(header_digest, false);
-	SET_FIELD(data_digest, false);
 	SET_FIELD(disable_error_logging, false);
 	SET_FIELD(transport_ack_timeout, SPDK_CLIENT_DEFAULT_TRANSPORT_ACK_TIMEOUT);
 	SET_FIELD(fabrics_connect_timeout_us, CLIENT_FABRIC_CONNECT_COMMAND_TIMEOUT);
-	SET_FIELD(disable_read_ana_log_page, false);
 	SET_FIELD(sector_size, DEFAULT_SECTOR_SIZE);
 	SET_FIELD(extended_lba_size, DEFAULT_EXTENDED_LBA_SIZE);
 	SET_FIELD(md_size, DEFAULT_MD_SIZE);
@@ -1129,13 +1125,6 @@ int client_request_check_timeout(struct client_request *req, uint16_t cid,
 							   qpair,
 							   cid);
 	return 0;
-}
-
-bool spdk_client_ctrlr_is_fabrics(struct spdk_client_ctrlr *ctrlr)
-{
-	assert(ctrlr);
-
-	return true;
 }
 
 uint64_t

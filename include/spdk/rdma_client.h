@@ -225,15 +225,6 @@ extern "C"
 		uint8_t extended_host_id[16];
 
 		/**
-		 * The I/O command set to select.
-		 *
-		 * If the requested command set is not supported, the controller
-		 * initialization process will not proceed. By default, the NVM
-		 * command set is used.
-		 */
-		enum spdk_client_cc_css command_set;
-
-		/**
 		 * Admin commands timeout in milliseconds (0 = no timeout).
 		 *
 		 * The timeout value is used for admin commands submitted internally
@@ -243,20 +234,6 @@ extern "C"
 		 * callback.
 		 */
 		uint32_t admin_timeout_ms;
-
-		/**
-		 * It is used for TCP transport.
-		 *
-		 * Set to true, means having header digest for the header in the Client/TCP PDU
-		 */
-		bool header_digest;
-
-		/**
-		 * It is used for TCP transport.
-		 *
-		 * Set to true, means having data digest for the data in the Client/TCP PDU
-		 */
-		bool data_digest;
 
 		/**
 		 * Disable logging of requests that are completed with error status.
@@ -296,14 +273,6 @@ extern "C"
 		 * this controller in microseconds.
 		 */
 		uint64_t fabrics_connect_timeout_us;
-
-		/**
-		 * Disable reading ANA log page. The upper layer should reading ANA log page instead
-		 * if set to true.
-		 *
-		 * Default is `false` (ANA log page is read).
-		 */
-		bool disable_read_ana_log_page;
 
 		uint32_t sector_size;
 
@@ -353,24 +322,6 @@ extern "C"
 	};
 
 	/**
-	 * Indicate whether a ctrlr handle is associated with a Discovery controller.
-	 *
-	 * \param ctrlr Opaque handle to Client controller.
-	 *
-	 * \return true if a discovery controller, else false.
-	 */
-	bool spdk_client_ctrlr_is_discovery(struct spdk_client_ctrlr *ctrlr);
-
-	/**
-	 * Indicate whether a ctrlr handle is associated with a fabrics controller.
-	 *
-	 * \param ctrlr Opaque handle to Client controller.
-	 *
-	 * \return true if a fabrics controller, else false.
-	 */
-	bool spdk_client_ctrlr_is_fabrics(struct spdk_client_ctrlr *ctrlr);
-
-	/**
 	 * Get the default options for the creation of a specific Client controller.
 	 *
 	 * \param[out] opts Will be filled with the default option.
@@ -414,29 +365,9 @@ extern "C"
 	enum spdk_client_transport_type
 	{
 		/**
-		 * PCIe Transport (locally attached devices)
-		 */
-		SPDK_CLIENT_TRANSPORT_PCIE = 256,
-
-		/**
 		 * RDMA Transport (RoCE, iWARP, etc.)
 		 */
 		SPDK_CLIENT_TRANSPORT_RDMA = SPDK_SRV_TRTYPE_RDMA,
-
-		/**
-		 * TCP Transport
-		 */
-		SPDK_CLIENT_TRANSPORT_TCP = SPDK_SRV_TRTYPE_TCP,
-
-		/**
-		 * Custom VFIO User Transport (Not spec defined)
-		 */
-		SPDK_CLIENT_TRANSPORT_VFIOUSER = 1024,
-
-		/**
-		 * Custom Transport (Not spec defined)
-		 */
-		SPDK_CLIENT_TRANSPORT_CUSTOM = 4096,
 	};
 
 	struct spdk_client_ctrlr *spdk_client_transport_ctrlr_construct(const char *trstring,
