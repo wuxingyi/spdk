@@ -3625,14 +3625,6 @@ extern "C"
 	struct spdk_client_transport_poll_group;
 
 	/**
-	 * Update and populate namespace CUSE devices (Experimental)
-	 *
-	 * \param ctrlr Opaque handle to the Client controller.
-	 *
-	 */
-	void spdk_client_cuse_update_namespaces(struct spdk_client_ctrlr *ctrlr);
-
-	/**
 	 * Signature for callback invoked after completing a register read/write operation.
 	 *
 	 * \param ctx Context passed by the user.

@@ -171,15 +171,6 @@ enum client_payload_type
 	CLIENT_PAYLOAD_TYPE_SGL,
 };
 
-/** Boot partition write states */
-enum client_bp_write_state
-{
-	SPDK_CLIENT_BP_WS_DOWNLOADING = 0x0,
-	SPDK_CLIENT_BP_WS_DOWNLOADED = 0x1,
-	SPDK_CLIENT_BP_WS_REPLACE = 0x2,
-	SPDK_CLIENT_BP_WS_ACTIVATE = 0x3,
-};
-
 /**
  * Descriptor for a request data payload.
  */
@@ -212,27 +203,27 @@ struct client_payload
 };
 
 #define CLIENT_PAYLOAD_CONTIG(contig_, md_) \
-	(struct client_payload)                 \
-	{                                       \
-		.reset_sgl_fn = NULL,               \
-		.next_sge_fn = NULL,                \
-		.contig_or_cb_arg = (contig_),      \
-		.md = (md_),                        \
-	}
+(struct client_payload)                     \
+{                                           \
+	.reset_sgl_fn = NULL,                   \
+	.next_sge_fn = NULL,                    \
+	.contig_or_cb_arg = (contig_),          \
+	.md = (md_),                            \
+}
 
 #define CLIENT_PAYLOAD_SGL(reset_sgl_fn_, next_sge_fn_, cb_arg_, md_, rpc_request_id_, data_length_, rpc_opc_, submit_type_, md5sum_) \
-	(struct client_payload)                                                                                                           \
-	{                                                                                                                                 \
-		.reset_sgl_fn = (reset_sgl_fn_),                                                                                              \
-		.next_sge_fn = (next_sge_fn_),                                                                                                \
-		.contig_or_cb_arg = (cb_arg_),                                                                                                \
-		.md = (md_),                                                                                                                  \
-		.rpc_request_id = (rpc_request_id_),                                                                                          \
-		.data_length = (data_length_),                                                                                                \
-		.rpc_opc = (rpc_opc_),                                                                                                        \
-		.submit_type = (submit_type_),                                                                                                \
-		.md5sum = (md5sum_),                                                                                                          \
-	}
+(struct client_payload)                                                                                                               \
+{                                                                                                                                     \
+	.reset_sgl_fn = (reset_sgl_fn_),                                                                                                  \
+	.next_sge_fn = (next_sge_fn_),                                                                                                    \
+	.contig_or_cb_arg = (cb_arg_),                                                                                                    \
+	.md = (md_),                                                                                                                      \
+	.rpc_request_id = (rpc_request_id_),                                                                                              \
+	.data_length = (data_length_),                                                                                                    \
+	.rpc_opc = (rpc_opc_),                                                                                                            \
+	.submit_type = (submit_type_),                                                                                                    \
+	.md5sum = (md5sum_),                                                                                                              \
+}
 
 static inline enum client_payload_type
 client_payload_type(const struct client_payload *payload)
@@ -515,21 +506,6 @@ enum client_ctrlr_state
 	CLIENT_CTRLR_STATE_INIT_DELAY,
 
 	/**
-	 * Connect the admin queue.
-	 */
-	CLIENT_CTRLR_STATE_CONNECT_ADMINQ,
-
-	/**
-	 * Controller has not started initialized yet.
-	 */
-	CLIENT_CTRLR_STATE_INIT = CLIENT_CTRLR_STATE_CONNECT_ADMINQ,
-
-	/**
-	 * Waiting for admin queue to connect.
-	 */
-	CLIENT_CTRLR_STATE_WAIT_FOR_CONNECT_ADMINQ,
-
-	/**
 	 * Read Version (VS) register.
 	 */
 	CLIENT_CTRLR_STATE_READ_VS,
@@ -726,37 +702,37 @@ enum client_ctrlr_state
 	CLIENT_CTRLR_STATE_ERROR
 };
 
-#define spdk_req_cpl_is_error(cpl)                 \
-	((cpl)->status.sc != SPDK_CLIENT_SC_SUCCESS || \
-	 (cpl)->status.sct != SPDK_CLIENT_SCT_GENERIC)
+#define spdk_req_cpl_is_error(cpl)             \
+((cpl)->status.sc != SPDK_CLIENT_SC_SUCCESS || \
+ (cpl)->status.sct != SPDK_CLIENT_SCT_GENERIC)
 
 #define spdk_req_cpl_is_success(cpl) (!spdk_req_cpl_is_error(cpl))
 
-#define spdk_req_cpl_is_pi_error(cpl)                                   \
-	((cpl)->status.sct == SPDK_CLIENT_SCT_MEDIA_ERROR &&                \
-	 ((cpl)->status.sc == SPDK_CLIENT_SC_GUARD_CHECK_ERROR ||           \
-	  (cpl)->status.sc == SPDK_CLIENT_SC_APPLICATION_TAG_CHECK_ERROR || \
-	  (cpl)->status.sc == SPDK_CLIENT_SC_REFERENCE_TAG_CHECK_ERROR))
+#define spdk_req_cpl_is_pi_error(cpl)                               \
+((cpl)->status.sct == SPDK_CLIENT_SCT_MEDIA_ERROR &&                \
+ ((cpl)->status.sc == SPDK_CLIENT_SC_GUARD_CHECK_ERROR ||           \
+  (cpl)->status.sc == SPDK_CLIENT_SC_APPLICATION_TAG_CHECK_ERROR || \
+  (cpl)->status.sc == SPDK_CLIENT_SC_REFERENCE_TAG_CHECK_ERROR))
 
 #define spdk_req_cpl_is_abort_success(cpl) \
-	(spdk_req_cpl_is_success(cpl) && !((cpl)->cdw0 & 1U))
+(spdk_req_cpl_is_success(cpl) && !((cpl)->cdw0 & 1U))
 
 #define spdk_req_cpl_is_path_error(cpl) \
-	((cpl)->status.sct == SPDK_CLIENT_SCT_PATH)
+((cpl)->status.sct == SPDK_CLIENT_SCT_PATH)
 
-#define spdk_req_cpl_is_ana_error(cpl)                                        \
-	((cpl)->status.sct == SPDK_CLIENT_SCT_PATH &&                             \
-	 ((cpl)->status.sc == SPDK_CLIENT_SC_ASYMMETRIC_ACCESS_PERSISTENT_LOSS || \
-	  (cpl)->status.sc == SPDK_CLIENT_SC_ASYMMETRIC_ACCESS_INACCESSIBLE ||    \
-	  (cpl)->status.sc == SPDK_CLIENT_SC_ASYMMETRIC_ACCESS_TRANSITION))
+#define spdk_req_cpl_is_ana_error(cpl)                                    \
+((cpl)->status.sct == SPDK_CLIENT_SCT_PATH &&                             \
+ ((cpl)->status.sc == SPDK_CLIENT_SC_ASYMMETRIC_ACCESS_PERSISTENT_LOSS || \
+  (cpl)->status.sc == SPDK_CLIENT_SC_ASYMMETRIC_ACCESS_INACCESSIBLE ||    \
+  (cpl)->status.sc == SPDK_CLIENT_SC_ASYMMETRIC_ACCESS_TRANSITION))
 
-#define spdk_req_cpl_is_aborted_sq_deletion(cpl)     \
-	((cpl)->status.sct == SPDK_CLIENT_SCT_GENERIC && \
-	 (cpl)->status.sc == SPDK_CLIENT_SC_ABORTED_SQ_DELETION)
+#define spdk_req_cpl_is_aborted_sq_deletion(cpl) \
+((cpl)->status.sct == SPDK_CLIENT_SCT_GENERIC && \
+ (cpl)->status.sc == SPDK_CLIENT_SC_ABORTED_SQ_DELETION)
 
-#define spdk_req_cpl_is_aborted_by_request(cpl)      \
-	((cpl)->status.sct == SPDK_CLIENT_SCT_GENERIC && \
-	 (cpl)->status.sc == SPDK_CLIENT_SC_ABORTED_BY_REQUEST)
+#define spdk_req_cpl_is_aborted_by_request(cpl)  \
+((cpl)->status.sct == SPDK_CLIENT_SCT_GENERIC && \
+ (cpl)->status.sc == SPDK_CLIENT_SC_ABORTED_BY_REQUEST)
 
 #define CLIENT_TIMEOUT_INFINITE 0
 #define CLIENT_TIMEOUT_KEEP_EXISTING UINT64_MAX
@@ -811,81 +787,6 @@ struct spdk_client_ctrlr_process
 	/** List to publish AENs to all procs in multiprocess setup */
 	STAILQ_HEAD(, spdk_client_ctrlr_aer_completion_list)
 	async_events;
-};
-
-struct client_register_completion
-{
-	struct spdk_req_cpl cpl;
-	uint64_t value;
-	spdk_client_reg_cb cb_fn;
-	void *cb_ctx;
-	STAILQ_ENTRY(client_register_completion)
-	stailq;
-};
-
-union spdk_client_cc_register
-{
-	uint32_t raw;
-	struct
-	{
-		/** enable */
-		uint32_t en : 1;
-
-		uint32_t reserved1 : 3;
-
-		/** i/o command set selected */
-		uint32_t css : 3;
-
-		/** memory page size */
-		uint32_t mps : 4;
-
-		/** arbitration mechanism selected */
-		uint32_t ams : 3;
-
-		/** shutdown notification */
-		uint32_t shn : 2;
-
-		/** i/o submission queue entry size */
-		uint32_t iosqes : 4;
-
-		/** i/o completion queue entry size */
-		uint32_t iocqes : 4;
-
-		uint32_t reserved2 : 8;
-	} bits;
-};
-SPDK_STATIC_ASSERT(sizeof(union spdk_client_cc_register) == 4, "Incorrect size");
-
-union spdk_client_csts_register
-{
-	uint32_t raw;
-	struct
-	{
-		/** ready */
-		uint32_t rdy : 1;
-
-		/** controller fatal status */
-		uint32_t cfs : 1;
-
-		/** shutdown status */
-		uint32_t shst : 2;
-
-		/** NVM subsystem reset occurred */
-		uint32_t nssro : 1;
-
-		/** Processing paused */
-		uint32_t pp : 1;
-
-		uint32_t reserved1 : 26;
-	} bits;
-};
-SPDK_STATIC_ASSERT(sizeof(union spdk_client_csts_register) == 4, "Incorrect size");
-
-enum spdk_client_shst_value
-{
-	SPDK_CLIENT_SHST_NORMAL = 0x0,
-	SPDK_CLIENT_SHST_OCCURRING = 0x1,
-	SPDK_CLIENT_SHST_COMPLETE = 0x2,
 };
 
 /**
@@ -1088,11 +989,6 @@ SPDK_STATIC_ASSERT(sizeof(struct spdk_client_ns_list) == 4096, "Incorrect size")
  */
 struct spdk_client_ctrlr
 {
-	/* Hot data (accessed in I/O path) starts here. */
-
-	/* The number of active namespaces */
-	uint32_t active_ns_count;
-
 	bool is_removed;
 
 	bool is_resetting;
@@ -1126,24 +1022,15 @@ struct spdk_client_ctrlr
 	enum spdk_client_transport_type trtype;
 
 	int state;
-	uint64_t state_timeout_tsc;
 
 	TAILQ_ENTRY(spdk_client_ctrlr)
 	tailq;
-
-	/** maximum i/o size in bytes */
-	uint32_t max_xfer_size;
-
-	/** minimum page size supported by this controller in bytes */
-	uint32_t min_page_size;
 
 	/** selected memory page size for this controller in bytes */
 	uint32_t page_size;
 
 	/** guards access to the controller itself, including admin queues */
 	pthread_mutex_t ctrlr_lock;
-
-	struct spdk_client_qpair *adminq;
 
 	struct spdk_bit_array *free_io_qids;
 	TAILQ_HEAD(, spdk_client_qpair)
@@ -1152,7 +1039,6 @@ struct spdk_client_ctrlr
 	pending_rpc_requests;
 
 	struct spdk_client_ctrlr_opts opts;
-
 
 	/* Extra sleep time during controller initialization */
 	uint64_t sleep_timeout_tsc;
@@ -1174,27 +1060,6 @@ struct spdk_client_ctrlr
 
 	/* maximum zone append size in bytes */
 	uint32_t max_zone_append_size;
-
-	/* PMR size in bytes */
-	uint64_t pmr_size;
-
-	/* Boot Partition Info */
-	enum client_bp_write_state bp_ws;
-	uint32_t bpid;
-	spdk_req_cmd_cb bp_write_cb_fn;
-	void *bp_write_cb_arg;
-
-	/* Firmware Download */
-	void *fw_payload;
-	unsigned int fw_size_remaining;
-	unsigned int fw_offset;
-	unsigned int fw_transfer_size;
-
-	/* Completed register operations */
-	STAILQ_HEAD(, client_register_completion)
-	register_operations;
-
-	union spdk_client_cc_register process_init_cc;
 
 	struct spdk_mempool *rpc_data_mp;
 	uint32_t io_unit_size;
@@ -1229,7 +1094,6 @@ struct client_ctrlr_detach_ctx
 	uint32_t shutdown_timeout_ms;
 	bool shutdown_complete;
 	enum client_ctrlr_detach_state state;
-	union spdk_client_csts_register csts;
 	TAILQ_ENTRY(client_ctrlr_detach_ctx)
 	link;
 };
@@ -1364,8 +1228,6 @@ void client_ctrlr_fail(struct spdk_client_ctrlr *ctrlr, bool hot_remove);
 void client_ctrlr_connected(struct spdk_client_probe_ctx *probe_ctx,
 							struct spdk_client_ctrlr *ctrlr);
 
-int client_ctrlr_submit_admin_request(struct spdk_client_ctrlr *ctrlr,
-									  struct client_request *req);
 int client_ctrlr_get_cap(struct spdk_client_ctrlr *ctrlr, union spdk_client_cap_register *cap);
 int client_ctrlr_get_vs(struct spdk_client_ctrlr *ctrlr, union spdk_client_vs_register *vs);
 int client_ctrlr_get_cmbsz(struct spdk_client_ctrlr *ctrlr, union spdk_client_cmbsz_register *cmbsz);
@@ -1391,18 +1253,6 @@ void client_qpair_abort_queued_reqs(struct spdk_client_qpair *qpair, uint32_t dn
 void client_qpair_resubmit_requests(struct spdk_client_qpair *qpair, uint32_t num_requests);
 int client_ctrlr_identify_active_ns(struct spdk_client_ctrlr *ctrlr);
 
-int client_fabric_ctrlr_set_reg_4(struct spdk_client_ctrlr *ctrlr, uint32_t offset, uint32_t value);
-int client_fabric_ctrlr_set_reg_8(struct spdk_client_ctrlr *ctrlr, uint32_t offset, uint64_t value);
-int client_fabric_ctrlr_get_reg_4(struct spdk_client_ctrlr *ctrlr, uint32_t offset, uint32_t *value);
-int client_fabric_ctrlr_get_reg_8(struct spdk_client_ctrlr *ctrlr, uint32_t offset, uint64_t *value);
-int client_fabric_ctrlr_set_reg_4_async(struct spdk_client_ctrlr *ctrlr, uint32_t offset,
-										uint32_t value, spdk_client_reg_cb cb_fn, void *cb_arg);
-int client_fabric_ctrlr_set_reg_8_async(struct spdk_client_ctrlr *ctrlr, uint32_t offset,
-										uint64_t value, spdk_client_reg_cb cb_fn, void *cb_arg);
-int client_fabric_ctrlr_get_reg_4_async(struct spdk_client_ctrlr *ctrlr, uint32_t offset,
-										spdk_client_reg_cb cb_fn, void *cb_arg);
-int client_fabric_ctrlr_get_reg_8_async(struct spdk_client_ctrlr *ctrlr, uint32_t offset,
-										spdk_client_reg_cb cb_fn, void *cb_arg);
 int client_fabric_ctrlr_scan(struct spdk_client_probe_ctx *probe_ctx, bool direct_connect);
 int client_fabric_ctrlr_discover(struct spdk_client_ctrlr *ctrlr,
 								 struct spdk_client_probe_ctx *probe_ctx);
@@ -1658,18 +1508,7 @@ struct spdk_client_ctrlr *client_transport_ctrlr_construct(const char *trstring,
 int client_transport_ctrlr_destruct(struct spdk_client_ctrlr *ctrlr);
 int client_transport_ctrlr_scan(struct spdk_client_probe_ctx *probe_ctx, bool direct_connect);
 int client_transport_ctrlr_enable(struct spdk_client_ctrlr *ctrlr);
-int client_transport_ctrlr_set_reg_4(struct spdk_client_ctrlr *ctrlr, uint32_t offset, uint32_t value);
-int client_transport_ctrlr_set_reg_8(struct spdk_client_ctrlr *ctrlr, uint32_t offset, uint64_t value);
-int client_transport_ctrlr_get_reg_4(struct spdk_client_ctrlr *ctrlr, uint32_t offset, uint32_t *value);
-int client_transport_ctrlr_get_reg_8(struct spdk_client_ctrlr *ctrlr, uint32_t offset, uint64_t *value);
-int client_transport_ctrlr_set_reg_4_async(struct spdk_client_ctrlr *ctrlr, uint32_t offset,
-										   uint32_t value, spdk_client_reg_cb cb_fn, void *cb_arg);
-int client_transport_ctrlr_set_reg_8_async(struct spdk_client_ctrlr *ctrlr, uint32_t offset,
-										   uint64_t value, spdk_client_reg_cb cb_fn, void *cb_arg);
-int client_transport_ctrlr_get_reg_4_async(struct spdk_client_ctrlr *ctrlr, uint32_t offset,
-										   spdk_client_reg_cb cb_fn, void *cb_arg);
-int client_transport_ctrlr_get_reg_8_async(struct spdk_client_ctrlr *ctrlr, uint32_t offset,
-										   spdk_client_reg_cb cb_fn, void *cb_arg);
+
 uint32_t client_transport_ctrlr_get_max_xfer_size(struct spdk_client_ctrlr *ctrlr);
 uint16_t client_transport_ctrlr_get_max_sges(struct spdk_client_ctrlr *ctrlr);
 struct spdk_client_qpair *client_transport_ctrlr_create_io_qpair(struct spdk_client_ctrlr *ctrlr,
@@ -1689,8 +1528,6 @@ int client_transport_ctrlr_connect_qpair_async(struct spdk_client_ctrlr *ctrlr,
 											   struct spdk_client_qpair *qpair);
 void client_transport_ctrlr_disconnect_qpair(struct spdk_client_ctrlr *ctrlr,
 											 struct spdk_client_qpair *qpair);
-int client_transport_ctrlr_get_memory_domains(const struct spdk_client_ctrlr *ctrlr,
-											  struct spdk_memory_domain **domains, int array_size);
 void client_transport_qpair_abort_reqs(struct spdk_client_qpair *qpair, uint32_t dnr);
 int client_transport_qpair_reset(struct spdk_client_qpair *qpair);
 int client_transport_qpair_submit_request(struct spdk_client_qpair *qpair, struct client_request *req);

@@ -182,23 +182,6 @@ int client_transport_ctrlr_destruct(struct spdk_client_ctrlr *ctrlr)
 	return transport->ops.ctrlr_destruct(ctrlr);
 }
 
-int client_transport_ctrlr_enable(struct spdk_client_ctrlr *ctrlr)
-{
-	const struct spdk_client_transport *transport = client_get_transport(ctrlr->trstring);
-
-	assert(transport != NULL);
-	return transport->ops.ctrlr_enable(ctrlr);
-}
-
-uint32_t
-client_transport_ctrlr_get_max_xfer_size(struct spdk_client_ctrlr *ctrlr)
-{
-	const struct spdk_client_transport *transport = client_get_transport(ctrlr->trstring);
-
-	assert(transport != NULL);
-	return transport->ops.ctrlr_get_max_xfer_size(ctrlr);
-}
-
 uint16_t
 client_transport_ctrlr_get_max_sges(struct spdk_client_ctrlr *ctrlr)
 {
@@ -498,20 +481,6 @@ void client_transport_ctrlr_disconnect_qpair(struct spdk_client_ctrlr *ctrlr, st
 	client_qpair_abort_all_queued_reqs(qpair, 0);
 	client_transport_qpair_abort_reqs(qpair, 0);
 	client_qpair_set_state(qpair, CLIENT_QPAIR_DISCONNECTED);
-}
-
-int client_transport_ctrlr_get_memory_domains(const struct spdk_client_ctrlr *ctrlr,
-											  struct spdk_memory_domain **domains, int array_size)
-{
-	const struct spdk_client_transport *transport = client_get_transport(ctrlr->trstring);
-
-	assert(transport != NULL);
-	if (transport->ops.ctrlr_get_memory_domains)
-	{
-		return transport->ops.ctrlr_get_memory_domains(ctrlr, domains, array_size);
-	}
-
-	return 0;
 }
 
 void client_transport_qpair_abort_reqs(struct spdk_client_qpair *qpair, uint32_t dnr)

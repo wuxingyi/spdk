@@ -665,7 +665,6 @@ void client_ctrlr_fail(struct spdk_client_ctrlr *ctrlr, bool hot_remove)
 	}
 
 	ctrlr->is_failed = true;
-	client_transport_ctrlr_disconnect_qpair(ctrlr, ctrlr->adminq);
 	CLIENT_CTRLR_ERRLOG(ctrlr, "in failed state.\n");
 }
 
@@ -686,20 +685,11 @@ static int
 client_ctrlr_shutdown_poll_async(struct spdk_client_ctrlr *ctrlr,
 								 struct client_ctrlr_detach_ctx *ctx)
 {
-	union spdk_client_csts_register csts;
 	uint32_t ms_waited;
 
 	switch (ctx->state)
 	{
 	case CLIENT_CTRLR_DETACH_SET_CC:
-	case CLIENT_CTRLR_DETACH_GET_CSTS:
-		/* We're still waiting for the register operation to complete */
-		spdk_client_qpair_process_completions(ctrlr->adminq, 0);
-		return -EAGAIN;
-
-	case CLIENT_CTRLR_DETACH_GET_CSTS_DONE:
-		ctx->state = CLIENT_CTRLR_DETACH_CHECK_CSTS;
-		break;
 
 	default:
 		assert(0 && "Should never happen");
@@ -707,13 +697,6 @@ client_ctrlr_shutdown_poll_async(struct spdk_client_ctrlr *ctrlr,
 	}
 
 	ms_waited = (spdk_get_ticks() - ctx->shutdown_start_tsc) * 1000 / spdk_get_ticks_hz();
-	csts.raw = ctx->csts.raw;
-
-	if (csts.bits.shst == SPDK_CLIENT_SHST_COMPLETE)
-	{
-		CLIENT_CTRLR_DEBUGLOG(ctrlr, "shutdown complete in %u milliseconds\n", ms_waited);
-		return 0;
-	}
 
 	if (ms_waited < ctx->shutdown_timeout_ms)
 	{
@@ -722,21 +705,6 @@ client_ctrlr_shutdown_poll_async(struct spdk_client_ctrlr *ctrlr,
 
 	CLIENT_CTRLR_ERRLOG(ctrlr, "did not shutdown within %u milliseconds\n",
 						ctx->shutdown_timeout_ms);
-
-	return 0;
-}
-
-static int
-client_ctrlr_enable(struct spdk_client_ctrlr *ctrlr)
-{
-	int rc;
-
-	rc = client_transport_ctrlr_enable(ctrlr);
-	if (rc != 0)
-	{
-		CLIENT_CTRLR_ERRLOG(ctrlr, "transport ctrlr_enable failed\n");
-		return rc;
-	}
 
 	return 0;
 }
@@ -790,9 +758,6 @@ int spdk_client_ctrlr_disconnect(struct spdk_client_ctrlr *ctrlr)
 	{
 		qpair->transport_failure_reason = SPDK_CLIENT_QPAIR_FAILURE_LOCAL;
 	}
-
-	ctrlr->adminq->transport_failure_reason = SPDK_CLIENT_QPAIR_FAILURE_LOCAL;
-	client_transport_ctrlr_disconnect_qpair(ctrlr, ctrlr->adminq);
 
 	client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
 	return 0;
@@ -1097,7 +1062,6 @@ int client_ctrlr_construct(struct spdk_client_ctrlr *ctrlr)
 	}
 
 	TAILQ_INIT(&ctrlr->active_procs);
-	STAILQ_INIT(&ctrlr->register_operations);
 
 	return rc;
 }
@@ -1169,24 +1133,6 @@ void client_ctrlr_destruct(struct spdk_client_ctrlr *ctrlr)
 		}
 		client_delay(1000);
 	}
-}
-
-int client_ctrlr_submit_admin_request(struct spdk_client_ctrlr *ctrlr,
-									  struct client_request *req)
-{
-	return client_qpair_submit_request(ctrlr->adminq, req);
-}
-
-uint64_t
-spdk_client_ctrlr_get_pmrsz(struct spdk_client_ctrlr *ctrlr)
-{
-	return ctrlr->pmr_size;
-}
-
-uint32_t
-spdk_client_ctrlr_get_max_xfer_size(const struct spdk_client_ctrlr *ctrlr)
-{
-	return ctrlr->max_xfer_size;
 }
 
 void spdk_client_ctrlr_register_timeout_callback(struct spdk_client_ctrlr *ctrlr,
@@ -1294,12 +1240,6 @@ void spdk_client_ctrlr_free_qid(struct spdk_client_ctrlr *ctrlr, uint16_t qid)
 	}
 
 	client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
-}
-
-int spdk_client_ctrlr_get_memory_domains(const struct spdk_client_ctrlr *ctrlr,
-										 struct spdk_memory_domain **domains, int array_size)
-{
-	return client_transport_ctrlr_get_memory_domains(ctrlr, domains, array_size);
 }
 
 struct spdk_client_poll_group *

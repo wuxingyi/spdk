@@ -2358,13 +2358,6 @@ client_rdma_ctrlr_create_io_qpair(struct spdk_client_ctrlr *ctrlr, uint16_t qid,
 										  opts->delay_cmd_submit);
 }
 
-static int
-client_rdma_ctrlr_enable(struct spdk_client_ctrlr *ctrlr)
-{
-	/* do nothing here */
-	return 0;
-}
-
 static int client_rdma_ctrlr_destruct(struct spdk_client_ctrlr *ctrlr);
 
 static struct spdk_client_ctrlr *client_rdma_ctrlr_construct(
@@ -2480,11 +2473,6 @@ client_rdma_ctrlr_destruct(struct spdk_client_ctrlr *ctrlr)
 {
 	struct client_rdma_ctrlr *rctrlr = client_rdma_ctrlr(ctrlr);
 	struct client_rdma_cm_event_entry *entry;
-
-	if (ctrlr->adminq)
-	{
-		client_rdma_ctrlr_delete_io_qpair(ctrlr, ctrlr->adminq);
-	}
 
 	STAILQ_FOREACH(entry, &rctrlr->pending_cm_events, link)
 	{
@@ -2962,19 +2950,6 @@ client_rdma_qpair_process_completions(struct spdk_client_qpair *qpair,
 failed:
 	client_rdma_fail_qpair(qpair, 0);
 	return -ENXIO;
-}
-
-static uint32_t
-client_rdma_ctrlr_get_max_xfer_size(struct spdk_client_ctrlr *ctrlr)
-{
-	/* max_mr_size by ibv_query_device indicates the largest value that we can
-	 * set for a registered memory region.  It is independent from the actual
-	 * I/O size and is very likely to be larger than 2 MiB which is the
-	 * granularity we currently register memory regions.  Hence return
-	 * UINT32_MAX here and let the generic layer use the controller data to
-	 * moderate this value.
-	 */
-	return UINT32_MAX;
 }
 
 static uint16_t
@@ -3526,20 +3501,6 @@ client_rdma_poll_group_free_stats(struct spdk_client_transport_poll_group *tgrou
 	free(stats);
 }
 
-static int
-client_rdma_ctrlr_get_memory_domains(const struct spdk_client_ctrlr *ctrlr,
-									 struct spdk_memory_domain **domains, int array_size)
-{
-	struct client_rdma_qpair *rqpair = client_rdma_qpair(ctrlr->adminq);
-
-	if (domains && array_size > 0)
-	{
-		domains[0] = rqpair->memory_domain->domain;
-	}
-
-	return 1;
-}
-
 void spdk_client_rdma_init_hooks(struct spdk_client_rdma_hooks *hooks)
 {
 	g_client_hooks = *hooks;
@@ -3550,17 +3511,13 @@ const struct spdk_client_transport_ops rdma_trans_ops = {
 	.type = SPDK_CLIENT_TRANSPORT_RDMA,
 	.ctrlr_construct = client_rdma_ctrlr_construct,
 	.ctrlr_destruct = client_rdma_ctrlr_destruct,
-	.ctrlr_enable = client_rdma_ctrlr_enable,
 
-	.ctrlr_get_max_xfer_size = client_rdma_ctrlr_get_max_xfer_size,
 	.ctrlr_get_max_sges = client_rdma_ctrlr_get_max_sges,
 
 	.ctrlr_create_io_qpair = client_rdma_ctrlr_create_io_qpair,
 	.ctrlr_delete_io_qpair = client_rdma_ctrlr_delete_io_qpair,
 	.ctrlr_connect_qpair = client_rdma_ctrlr_connect_qpair,
 	.ctrlr_disconnect_qpair = client_rdma_ctrlr_disconnect_qpair,
-
-	.ctrlr_get_memory_domains = client_rdma_ctrlr_get_memory_domains,
 
 	.qpair_abort_reqs = client_rdma_qpair_abort_reqs,
 	.qpair_reset = client_rdma_qpair_reset,

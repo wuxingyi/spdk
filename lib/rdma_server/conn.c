@@ -1005,12 +1005,6 @@ void spdk_client_qpair_remove_cmd_error_injection(struct spdk_client_ctrlr *ctrl
 {
 	struct client_error_cmd *cmd, *entry;
 
-	if (qpair == NULL)
-	{
-		qpair = ctrlr->adminq;
-		client_robust_mutex_lock(&ctrlr->ctrlr_lock);
-	}
-
 	TAILQ_FOREACH_SAFE(cmd, &qpair->err_cmd_head, link, entry)
 	{
 		if (cmd->opc == opc)
