@@ -546,7 +546,6 @@ int spdk_client_ctrlr_reconnect_io_qpair(struct spdk_client_qpair *qpair)
 	int rc;
 
 	assert(qpair != NULL);
-	assert(client_qpair_is_admin_queue(qpair) == false);
 	assert(qpair->ctrlr != NULL);
 
 	ctrlr = qpair->ctrlr;
@@ -587,12 +586,6 @@ int spdk_client_ctrlr_reconnect_io_qpair(struct spdk_client_qpair *qpair)
 out:
 	client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
 	return rc;
-}
-
-spdk_client_qp_failure_reason
-spdk_client_ctrlr_get_admin_qp_failure_reason(struct spdk_client_ctrlr *ctrlr)
-{
-	return ctrlr->adminq->transport_failure_reason;
 }
 
 /*
@@ -1009,8 +1002,6 @@ int spdk_client_ctrlr_disconnect(struct spdk_client_ctrlr *ctrlr)
 
 	/* Abort all of the queued abort requests */
 	client_ctrlr_abort_queued_aborts(ctrlr);
-
-	client_transport_admin_qpair_abort_aers(ctrlr->adminq);
 
 	/* Disable all queues before disabling the controller hardware. */
 	TAILQ_FOREACH(qpair, &ctrlr->active_io_qpairs, tailq)
@@ -1901,7 +1892,7 @@ int client_request_check_timeout(struct client_request *req, uint16_t cid,
 {
 	struct spdk_client_qpair *qpair = req->qpair;
 	struct spdk_client_ctrlr *ctrlr = qpair->ctrlr;
-	uint64_t timeout_ticks = client_qpair_is_admin_queue(qpair) ? active_proc->timeout_admin_ticks : active_proc->timeout_io_ticks;
+	uint64_t timeout_ticks = active_proc->timeout_io_ticks;
 
 	assert(active_proc->timeout_cb_fn != NULL);
 
@@ -1911,12 +1902,6 @@ int client_request_check_timeout(struct client_request *req, uint16_t cid,
 	}
 
 	if (req->pid != g_spdk_client_pid)
-	{
-		return 0;
-	}
-
-	if (client_qpair_is_admin_queue(qpair) &&
-		req->cmd.opc == SPDK_CLIENT_OPC_ASYNC_EVENT_REQUEST)
 	{
 		return 0;
 	}
@@ -1934,7 +1919,7 @@ int client_request_check_timeout(struct client_request *req, uint16_t cid,
 	 * qpair to NULL.
 	 */
 	active_proc->timeout_cb_fn(active_proc->timeout_cb_arg, ctrlr,
-							   client_qpair_is_admin_queue(qpair) ? NULL : qpair,
+							   qpair,
 							   cid);
 	return 0;
 }

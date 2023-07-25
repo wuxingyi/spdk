@@ -1348,12 +1348,6 @@ int client_driver_init(void);
 #define client_delay usleep
 
 static inline bool
-client_qpair_is_admin_queue(struct spdk_client_qpair *qpair)
-{
-	return qpair->id == 0;
-}
-
-static inline bool
 client_qpair_is_io_queue(struct spdk_client_qpair *qpair)
 {
 	return qpair->id != 0;
@@ -1802,7 +1796,6 @@ int client_transport_qpair_reset(struct spdk_client_qpair *qpair);
 int client_transport_qpair_submit_request(struct spdk_client_qpair *qpair, struct client_request *req);
 int32_t client_transport_qpair_process_completions(struct spdk_client_qpair *qpair,
 												   uint32_t max_completions);
-void client_transport_admin_qpair_abort_aers(struct spdk_client_qpair *qpair);
 int client_transport_qpair_iterate_requests(struct spdk_client_qpair *qpair,
 											int (*iter_fn)(struct client_request *req, void *arg),
 											void *arg);

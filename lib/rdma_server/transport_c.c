@@ -519,26 +519,15 @@ void client_transport_qpair_abort_reqs(struct spdk_client_qpair *qpair, uint32_t
 	const struct spdk_client_transport *transport;
 
 	assert(dnr <= 1);
-	if (spdk_likely(!client_qpair_is_admin_queue(qpair)))
-	{
-		qpair->transport->ops.qpair_abort_reqs(qpair, dnr);
-	}
-	else
-	{
-		transport = client_get_transport(qpair->ctrlr->trstring);
-		assert(transport != NULL);
-		transport->ops.qpair_abort_reqs(qpair, dnr);
-	}
+
+	transport = client_get_transport(qpair->ctrlr->trstring);
+	assert(transport != NULL);
+	transport->ops.qpair_abort_reqs(qpair, dnr);
 }
 
 int client_transport_qpair_reset(struct spdk_client_qpair *qpair)
 {
 	const struct spdk_client_transport *transport;
-
-	if (spdk_likely(!client_qpair_is_admin_queue(qpair)))
-	{
-		return qpair->transport->ops.qpair_reset(qpair);
-	}
 
 	transport = client_get_transport(qpair->ctrlr->trstring);
 	assert(transport != NULL);
@@ -549,11 +538,6 @@ int client_transport_qpair_submit_request(struct spdk_client_qpair *qpair, struc
 {
 	const struct spdk_client_transport *transport;
 
-	if (spdk_likely(!client_qpair_is_admin_queue(qpair)))
-	{
-		return qpair->transport->ops.qpair_submit_request(qpair, req);
-	}
-
 	transport = client_get_transport(qpair->ctrlr->trstring);
 	assert(transport != NULL);
 	return transport->ops.qpair_submit_request(qpair, req);
@@ -563,11 +547,6 @@ int32_t
 client_transport_qpair_process_completions(struct spdk_client_qpair *qpair, uint32_t max_completions)
 {
 	const struct spdk_client_transport *transport;
-
-	if (spdk_likely(!client_qpair_is_admin_queue(qpair)))
-	{
-		return qpair->transport->ops.qpair_process_completions(qpair, max_completions);
-	}
 
 	transport = client_get_transport(qpair->ctrlr->trstring);
 	assert(transport != NULL);
@@ -580,22 +559,9 @@ int client_transport_qpair_iterate_requests(struct spdk_client_qpair *qpair,
 {
 	const struct spdk_client_transport *transport;
 
-	if (spdk_likely(!client_qpair_is_admin_queue(qpair)))
-	{
-		return qpair->transport->ops.qpair_iterate_requests(qpair, iter_fn, arg);
-	}
-
 	transport = client_get_transport(qpair->ctrlr->trstring);
 	assert(transport != NULL);
 	return transport->ops.qpair_iterate_requests(qpair, iter_fn, arg);
-}
-
-void client_transport_admin_qpair_abort_aers(struct spdk_client_qpair *qpair)
-{
-	const struct spdk_client_transport *transport = client_get_transport(qpair->ctrlr->trstring);
-
-	assert(transport != NULL);
-	transport->ops.admin_qpair_abort_aers(qpair);
 }
 
 struct spdk_client_transport_poll_group *

@@ -597,31 +597,6 @@ void client_qpair_resubmit_requests(struct spdk_client_qpair *qpair, uint32_t nu
 	_client_qpair_complete_abort_queued_reqs(qpair);
 }
 
-static void
-client_complete_register_operations(struct spdk_client_qpair *qpair)
-{
-	struct client_register_completion *ctx;
-	struct spdk_client_ctrlr *ctrlr = qpair->ctrlr;
-	STAILQ_HEAD(, client_register_completion)
-	operations;
-
-	STAILQ_INIT(&operations);
-	client_robust_mutex_lock(&ctrlr->ctrlr_lock);
-	STAILQ_SWAP(&ctrlr->register_operations, &operations, client_register_completion);
-	client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
-
-	while (!STAILQ_EMPTY(&operations))
-	{
-		ctx = STAILQ_FIRST(&operations);
-		STAILQ_REMOVE_HEAD(&operations, stailq);
-		if (ctx->cb_fn != NULL)
-		{
-			ctx->cb_fn(ctx->cb_ctx, ctx->value, &ctx->cpl);
-		}
-		free(ctx);
-	}
-}
-
 int32_t
 spdk_client_qpair_process_completions(struct spdk_client_qpair *qpair, uint32_t max_completions)
 {
@@ -669,10 +644,6 @@ spdk_client_qpair_process_completions(struct spdk_client_qpair *qpair, uint32_t 
 	if (ret < 0)
 	{
 		SPDK_ERRLOG("CQ transport error %d (%s) on qpair id %hu\n", ret, spdk_strerror(-ret), qpair->id);
-		if (client_qpair_is_admin_queue(qpair))
-		{
-			client_ctrlr_fail(qpair->ctrlr, false);
-		}
 	}
 	qpair->in_completion_context = 0;
 	if (qpair->delete_after_completion_context)
@@ -692,12 +663,6 @@ spdk_client_qpair_process_completions(struct spdk_client_qpair *qpair, uint32_t 
 	if (ret > 0)
 	{
 		client_qpair_resubmit_requests(qpair, ret);
-	}
-
-	/* Complete any pending register operations */
-	if (client_qpair_is_admin_queue(qpair))
-	{
-		client_complete_register_operations(qpair);
 	}
 
 	return ret;
@@ -1036,57 +1001,6 @@ void client_qpair_abort_all_queued_reqs(struct spdk_client_qpair *qpair, uint32_
 	_client_qpair_complete_abort_queued_reqs(qpair);
 }
 
-int spdk_client_qpair_add_cmd_error_injection(struct spdk_client_ctrlr *ctrlr,
-											  struct spdk_client_qpair *qpair,
-											  uint8_t opc, bool do_not_submit,
-											  uint64_t timeout_in_us,
-											  uint32_t err_count,
-											  uint8_t sct, uint8_t sc)
-{
-	struct client_error_cmd *entry, *cmd = NULL;
-	int rc = 0;
-
-	if (qpair == NULL)
-	{
-		qpair = ctrlr->adminq;
-		client_robust_mutex_lock(&ctrlr->ctrlr_lock);
-	}
-
-	TAILQ_FOREACH(entry, &qpair->err_cmd_head, link)
-	{
-		if (entry->opc == opc)
-		{
-			cmd = entry;
-			break;
-		}
-	}
-
-	if (cmd == NULL)
-	{
-		cmd = spdk_zmalloc(sizeof(*cmd), 64, NULL, SPDK_ENV_LCORE_ID_ANY, SPDK_MALLOC_DMA);
-		if (!cmd)
-		{
-			rc = -ENOMEM;
-			goto out;
-		}
-		TAILQ_INSERT_TAIL(&qpair->err_cmd_head, cmd, link);
-	}
-
-	cmd->do_not_submit = do_not_submit;
-	cmd->err_count = err_count;
-	cmd->timeout_tsc = timeout_in_us * spdk_get_ticks_hz() / 1000000ULL;
-	cmd->opc = opc;
-	cmd->status.sct = sct;
-	cmd->status.sc = sc;
-out:
-	if (client_qpair_is_admin_queue(qpair))
-	{
-		client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
-	}
-
-	return rc;
-}
-
 void spdk_client_qpair_remove_cmd_error_injection(struct spdk_client_ctrlr *ctrlr,
 												  struct spdk_client_qpair *qpair,
 												  uint8_t opc)
@@ -1107,11 +1021,6 @@ void spdk_client_qpair_remove_cmd_error_injection(struct spdk_client_ctrlr *ctrl
 			spdk_free(cmd);
 			break;
 		}
-	}
-
-	if (client_qpair_is_admin_queue(qpair))
-	{
-		client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
 	}
 }
 

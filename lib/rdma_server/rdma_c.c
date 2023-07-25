@@ -1610,17 +1610,12 @@ client_rdma_ctrlr_connect_qpair_poll(struct spdk_client_ctrlr *ctrlr, struct spd
 
 	case CLIENT_RDMA_QPAIR_STATE_INITIALIZING:
 	case CLIENT_RDMA_QPAIR_STATE_EXITING:
-		if (!client_qpair_is_admin_queue(qpair))
-		{
-			client_robust_mutex_lock(&ctrlr->ctrlr_lock);
-		}
+
+		client_robust_mutex_lock(&ctrlr->ctrlr_lock);
 
 		rc = client_rdma_process_event_poll(rqpair);
 
-		if (!client_qpair_is_admin_queue(qpair))
-		{
-			client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
-		}
+		client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
 
 		if (rc == 0)
 		{
@@ -2626,14 +2621,7 @@ client_rdma_qpair_check_timeout(struct spdk_client_qpair *qpair)
 		return;
 	}
 
-	if (client_qpair_is_admin_queue(qpair))
-	{
-		active_proc = client_ctrlr_get_current_process(ctrlr);
-	}
-	else
-	{
-		active_proc = qpair->active_proc;
-	}
+	active_proc = qpair->active_proc;
 
 	/* Only check timeouts if the current process has a timeout callback. */
 	if (active_proc == NULL || active_proc->timeout_cb_fn == NULL)
@@ -2952,10 +2940,6 @@ client_rdma_qpair_process_completions(struct spdk_client_qpair *qpair,
 		return -ENXIO;
 
 	default:
-		if (client_qpair_is_admin_queue(qpair))
-		{
-			client_rdma_poll_events(rctrlr);
-		}
 		client_rdma_qpair_process_cm_event(rqpair);
 		break;
 	}
@@ -3330,17 +3314,10 @@ client_rdma_ctrlr_disconnect_qpair_poll(struct spdk_client_ctrlr *ctrlr, struct 
 	switch (rqpair->state)
 	{
 	case CLIENT_RDMA_QPAIR_STATE_EXITING:
-		if (!client_qpair_is_admin_queue(qpair))
-		{
-			client_robust_mutex_lock(&ctrlr->ctrlr_lock);
-		}
 
+		client_robust_mutex_lock(&ctrlr->ctrlr_lock);
 		rc = client_rdma_process_event_poll(rqpair);
-
-		if (!client_qpair_is_admin_queue(qpair))
-		{
-			client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
-		}
+		client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
 		break;
 
 	case CLIENT_RDMA_QPAIR_STATE_LINGERING:
