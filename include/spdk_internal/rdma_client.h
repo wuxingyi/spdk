@@ -121,7 +121,6 @@ enum spdk_client_data_transfer
  *  try to configure, if available.
  */
 #define DEFAULT_MAX_IO_QUEUES (1024)
-#define DEFAULT_ADMIN_QUEUE_SIZE (32)
 #define DEFAULT_IO_QUEUE_SIZE (128)
 #define DEFAULT_IO_QUEUE_SIZE_FOR_QUIRK (1024) /* Matches Linux kernel driver */
 
@@ -584,11 +583,6 @@ enum client_ctrlr_state
 	 * Waiting for CSTS register to be read as part of waiting for CSTS.RDY = 1.
 	 */
 	CLIENT_CTRLR_STATE_ENABLE_WAIT_FOR_READY_1_WAIT_FOR_CSTS,
-
-	/**
-	 * Reset the Admin queue of the controller.
-	 */
-	CLIENT_CTRLR_STATE_RESET_ADMIN_QUEUE,
 
 	/**
 	 * Identify Controller command will be sent to then controller.
