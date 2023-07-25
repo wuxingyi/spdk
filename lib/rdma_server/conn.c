@@ -505,66 +505,6 @@ client_qpair_abort_queued_reqs_with_cbarg(struct spdk_client_qpair *qpair, void 
 	return aborting;
 }
 
-static inline bool
-client_qpair_check_enabled(struct spdk_client_qpair *qpair)
-{
-	struct client_request *req;
-
-	/*
-	 * Either during initial connect or reset, the qpair should follow the given state machine.
-	 * QPAIR_DISABLED->QPAIR_CONNECTING->QPAIR_CONNECTED->QPAIR_ENABLING->QPAIR_ENABLED. In the
-	 * reset case, once the qpair is properly connected, we need to abort any outstanding requests
-	 * from the old transport connection and encourage the application to retry them. We also need
-	 * to submit any queued requests that built up while we were in the connected or enabling state.
-	 */
-	if (client_qpair_get_state(qpair) == CLIENT_QPAIR_CONNECTED && !qpair->ctrlr->is_resetting)
-	{
-		client_qpair_set_state(qpair, CLIENT_QPAIR_ENABLING);
-		/*
-		 * PCIe is special, for fabrics transports, we can abort requests before disconnect during reset
-		 * but we have historically not disconnected pcie qpairs during reset so we have to abort requests
-		 * here.
-		 */
-		if (qpair->ctrlr->trtype == SPDK_CLIENT_TRANSPORT_PCIE &&
-			!qpair->is_new_qpair)
-		{
-			client_qpair_abort_all_queued_reqs(qpair, 0);
-			client_transport_qpair_abort_reqs(qpair, 0);
-		}
-
-		client_qpair_set_state(qpair, CLIENT_QPAIR_ENABLED);
-		while (!STAILQ_EMPTY(&qpair->queued_req))
-		{
-			req = STAILQ_FIRST(&qpair->queued_req);
-			STAILQ_REMOVE_HEAD(&qpair->queued_req, stailq);
-			if (client_qpair_resubmit_request(qpair, req))
-			{
-				break;
-			}
-		}
-	}
-
-	/*
-	 * When doing a reset, we must disconnect the qpair on the proper core.
-	 * Note, reset is the only case where we set the failure reason without
-	 * setting the qpair state since reset is done at the generic layer on the
-	 * controller thread and we can't disconnect I/O qpairs from the controller
-	 * thread.
-	 */
-	if (qpair->transport_failure_reason != SPDK_CLIENT_QPAIR_FAILURE_NONE &&
-		client_qpair_get_state(qpair) == CLIENT_QPAIR_ENABLED)
-	{
-		/* Don't disconnect PCIe qpairs. They are a special case for reset. */
-		if (qpair->ctrlr->trtype != SPDK_CLIENT_TRANSPORT_PCIE)
-		{
-			client_ctrlr_disconnect_qpair(qpair);
-		}
-		return false;
-	}
-
-	return client_qpair_get_state(qpair) == CLIENT_QPAIR_ENABLED;
-}
-
 void client_qpair_resubmit_requests(struct spdk_client_qpair *qpair, uint32_t num_requests)
 {
 	uint32_t i;
@@ -609,16 +549,6 @@ spdk_client_qpair_process_completions(struct spdk_client_qpair *qpair, uint32_t 
 			client_qpair_abort_all_queued_reqs(qpair, 0);
 			client_transport_qpair_abort_reqs(qpair, 0);
 		}
-		return -ENXIO;
-	}
-
-	if (spdk_unlikely(!client_qpair_check_enabled(qpair) &&
-					  !(client_qpair_get_state(qpair) == CLIENT_QPAIR_CONNECTING)))
-	{
-		/*
-		 * qpair is not enabled, likely because a controller reset is
-		 *  in progress.
-		 */
 		return -ENXIO;
 	}
 
@@ -792,8 +722,6 @@ _client_qpair_submit_request(struct spdk_client_qpair *qpair, struct client_requ
 	struct client_error_cmd *cmd;
 	struct spdk_client_ctrlr *ctrlr = qpair->ctrlr;
 	bool child_req_failed = false;
-
-	client_qpair_check_enabled(qpair);
 
 	if (spdk_unlikely(client_qpair_get_state(qpair) == CLIENT_QPAIR_DISCONNECTED ||
 					  client_qpair_get_state(qpair) == CLIENT_QPAIR_DISCONNECTING ||
