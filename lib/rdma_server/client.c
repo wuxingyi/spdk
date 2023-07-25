@@ -91,7 +91,6 @@ void spdk_client_ctrlr_get_default_ctrlr_opts(struct spdk_client_ctrlr_opts *opt
 	SET_FIELD(num_io_queues, DEFAULT_MAX_IO_QUEUES);
 	SET_FIELD(use_cmb_sqs, false);
 	SET_FIELD(no_shn_notification, false);
-	SET_FIELD(keep_alive_timeout_ms, MIN_KEEP_ALIVE_TIMEOUT_IN_MS);
 	SET_FIELD(transport_retry_count, SPDK_CLIENT_DEFAULT_RETRY_COUNT);
 	SET_FIELD(io_queue_size, DEFAULT_IO_QUEUE_SIZE);
 
@@ -119,7 +118,6 @@ void spdk_client_ctrlr_get_default_ctrlr_opts(struct spdk_client_ctrlr_opts *opt
 	SET_FIELD(data_digest, false);
 	SET_FIELD(disable_error_logging, false);
 	SET_FIELD(transport_ack_timeout, SPDK_CLIENT_DEFAULT_TRANSPORT_ACK_TIMEOUT);
-	SET_FIELD(admin_queue_size, DEFAULT_ADMIN_QUEUE_SIZE);
 	SET_FIELD(fabrics_connect_timeout_us, CLIENT_FABRIC_CONNECT_COMMAND_TIMEOUT);
 	SET_FIELD(disable_read_ana_log_page, false);
 	SET_FIELD(sector_size, DEFAULT_SECTOR_SIZE);
@@ -783,9 +781,6 @@ int spdk_client_ctrlr_disconnect(struct spdk_client_ctrlr *ctrlr)
 	ctrlr->is_failed = false;
 
 	CLIENT_CTRLR_NOTICELOG(ctrlr, "resetting controller\n");
-
-	/* Disable keep-alive, it'll be re-enabled as part of the init process */
-	ctrlr->keep_alive_interval_ticks = 0;
 
 	/* Abort all of the queued abort requests */
 	client_ctrlr_abort_queued_aborts(ctrlr);

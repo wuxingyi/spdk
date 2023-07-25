@@ -1,4 +1,4 @@
-/*-
+/*
  *   BSD LICENSE
  *
  *   Copyright (c) Intel Corporation. All rights reserved.
@@ -141,8 +141,6 @@ enum spdk_client_data_transfer
 
 #define SPDK_CLIENT_TRANSPORT_ACK_TIMEOUT_DISABLED (0)
 #define SPDK_CLIENT_DEFAULT_TRANSPORT_ACK_TIMEOUT SPDK_CLIENT_TRANSPORT_ACK_TIMEOUT_DISABLED
-
-#define MIN_KEEP_ALIVE_TIMEOUT_IN_MS (10000)
 
 /* We want to fit submission and completion rings each in a single 2MB
  * hugepage to ensure physical address contiguity.
@@ -637,16 +635,6 @@ enum client_ctrlr_state
 	CLIENT_CTRLR_STATE_WAIT_FOR_CONFIGURE_AER,
 
 	/**
-	 * Set Keep Alive Timeout of the controller.
-	 */
-	CLIENT_CTRLR_STATE_SET_KEEP_ALIVE_TIMEOUT,
-
-	/**
-	 * Waiting for Set Keep Alive Timeout to be completed.
-	 */
-	CLIENT_CTRLR_STATE_WAIT_FOR_KEEP_ALIVE_TIMEOUT,
-
-	/**
 	 * Get Identify I/O Command Set Specific Controller data structure.
 	 */
 	CLIENT_CTRLR_STATE_IDENTIFY_IOCS_SPECIFIC,
@@ -943,8 +931,6 @@ enum spdk_client_generic_command_status_code
 	SPDK_CLIENT_SC_INVALID_SGL_OFFSET = 0x16,
 	/* 0x17 - reserved */
 	SPDK_CLIENT_SC_HOSTID_INCONSISTENT_FORMAT = 0x18,
-	SPDK_CLIENT_SC_KEEP_ALIVE_EXPIRED = 0x19,
-	SPDK_CLIENT_SC_KEEP_ALIVE_INVALID = 0x1a,
 	SPDK_CLIENT_SC_ABORTED_PREEMPT = 0x1b,
 	SPDK_CLIENT_SC_SANITIZE_FAILED = 0x1c,
 	SPDK_CLIENT_SC_SANITIZE_IN_PROGRESS = 0x1d,
@@ -1073,7 +1059,6 @@ enum spdk_client_admin_opcode
 	SPDK_CLIENT_OPC_DEVICE_SELF_TEST = 0x14,
 	SPDK_CLIENT_OPC_NS_ATTACHMENT = 0x15,
 
-	SPDK_CLIENT_OPC_KEEP_ALIVE = 0x18,
 	SPDK_CLIENT_OPC_DIRECTIVE_SEND = 0x19,
 	SPDK_CLIENT_OPC_DIRECTIVE_RECEIVE = 0x1a,
 
@@ -1142,9 +1127,6 @@ struct spdk_client_ctrlr
 
 	int state;
 	uint64_t state_timeout_tsc;
-
-	uint64_t next_keep_alive_tick;
-	uint64_t keep_alive_interval_ticks;
 
 	TAILQ_ENTRY(spdk_client_ctrlr)
 	tailq;
