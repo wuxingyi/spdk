@@ -871,12 +871,6 @@ int client_driver_init(void);
 
 #define client_delay usleep
 
-static inline bool
-client_qpair_is_io_queue(struct spdk_client_qpair *qpair)
-{
-	return qpair->id != 0;
-}
-
 /**
  * Extract the Data Transfer bits from an Client opcode.
  *
@@ -914,49 +908,11 @@ client_robust_mutex_unlock(pthread_mutex_t *mtx)
 int client_poll_group_connect_qpair(struct spdk_client_qpair *qpair);
 int client_poll_group_disconnect_qpair(struct spdk_client_qpair *qpair);
 
-/* Admin functions */
-int client_ctrlr_cmd_identify(struct spdk_client_ctrlr *ctrlr,
-							  uint8_t cns, uint16_t cntid, uint32_t nsid,
-							  uint8_t csi, void *payload, size_t payload_size,
-							  spdk_req_cmd_cb cb_fn, void *cb_arg);
-int client_ctrlr_cmd_set_num_queues(struct spdk_client_ctrlr *ctrlr,
-									uint32_t num_queues, spdk_req_cmd_cb cb_fn,
-									void *cb_arg);
-int client_ctrlr_cmd_get_num_queues(struct spdk_client_ctrlr *ctrlr,
-									spdk_req_cmd_cb cb_fn, void *cb_arg);
-
-int client_ctrlr_cmd_set_host_id(struct spdk_client_ctrlr *ctrlr, void *host_id, uint32_t host_id_size,
-								 spdk_req_cmd_cb cb_fn, void *cb_arg);
-
-int client_ctrlr_cmd_format(struct spdk_client_ctrlr *ctrlr, uint32_t nsid,
-							struct spdk_client_format *format, spdk_req_cmd_cb cb_fn, void *cb_arg);
-
-void client_completion_poll_cb(void *arg, const struct spdk_req_cpl *cpl);
-int client_wait_for_completion(struct spdk_client_qpair *qpair,
-							   struct client_completion_poll_status *status);
-int client_wait_for_completion_robust_lock(struct spdk_client_qpair *qpair,
-										   struct client_completion_poll_status *status,
-										   pthread_mutex_t *robust_mutex);
-int client_wait_for_completion_timeout(struct spdk_client_qpair *qpair,
-									   struct client_completion_poll_status *status,
-									   uint64_t timeout_in_usecs);
-int client_wait_for_completion_robust_lock_timeout(struct spdk_client_qpair *qpair,
-												   struct client_completion_poll_status *status,
-												   pthread_mutex_t *robust_mutex,
-												   uint64_t timeout_in_usecs);
-int client_wait_for_completion_robust_lock_timeout_poll(struct spdk_client_qpair *qpair,
-														struct client_completion_poll_status *status,
-														pthread_mutex_t *robust_mutex);
-
 struct spdk_client_ctrlr_process *client_ctrlr_get_process(struct spdk_client_ctrlr *ctrlr,
 														   pid_t pid);
 struct spdk_client_ctrlr_process *client_ctrlr_get_current_process(struct spdk_client_ctrlr *ctrlr);
 int client_ctrlr_add_process(struct spdk_client_ctrlr *ctrlr, void *devhandle);
 void client_ctrlr_free_processes(struct spdk_client_ctrlr *ctrlr);
-struct spdk_pci_device *client_ctrlr_proc_get_devhandle(struct spdk_client_ctrlr *ctrlr);
-
-int client_ctrlr_probe(const struct spdk_client_transport_id *trid,
-					   struct spdk_client_probe_ctx *probe_ctx, void *devhandle);
 
 int client_ctrlr_construct(struct spdk_client_ctrlr *ctrlr);
 void client_ctrlr_destruct_finish(struct spdk_client_ctrlr *ctrlr);
@@ -969,13 +925,6 @@ void client_ctrlr_fail(struct spdk_client_ctrlr *ctrlr, bool hot_remove);
 void client_ctrlr_connected(struct spdk_client_probe_ctx *probe_ctx,
 							struct spdk_client_ctrlr *ctrlr);
 
-int client_ctrlr_get_cap(struct spdk_client_ctrlr *ctrlr, union spdk_client_cap_register *cap);
-int client_ctrlr_get_vs(struct spdk_client_ctrlr *ctrlr, union spdk_client_vs_register *vs);
-int client_ctrlr_get_cmbsz(struct spdk_client_ctrlr *ctrlr, union spdk_client_cmbsz_register *cmbsz);
-int client_ctrlr_get_pmrcap(struct spdk_client_ctrlr *ctrlr, union spdk_client_pmrcap_register *pmrcap);
-int client_ctrlr_get_bpinfo(struct spdk_client_ctrlr *ctrlr, union spdk_client_bpinfo_register *bpinfo);
-int client_ctrlr_set_bpmbl(struct spdk_client_ctrlr *ctrlr, uint64_t bpmbl_value);
-bool client_ctrlr_multi_iocs_enabled(struct spdk_client_ctrlr *ctrlr);
 void client_ctrlr_process_async_event(struct spdk_client_ctrlr *ctrlr,
 									  const struct spdk_req_cpl *cpl);
 void client_ctrlr_disconnect_qpair(struct spdk_client_qpair *qpair);

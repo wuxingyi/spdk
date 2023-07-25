@@ -3587,39 +3587,7 @@ extern "C"
 	};
 
 	/**
-	 * \brief Set the global hooks for the RDMA transport, if necessary.
-	 *
-	 * This call is optional and must be performed prior to probing for
-	 * any devices. By default, the RDMA transport will use the ibverbs
-	 * library to create protection domains and register memory. This
-	 * is a mechanism to subvert that and use an existing registration.
-	 *
-	 * This function may only be called one time per process.
-	 *
-	 * \param hooks for initializing global hooks
-	 */
-	void spdk_client_rdma_init_hooks(struct spdk_client_rdma_hooks *hooks);
 
-	/**
-	 * Get SPDK memory domains used by the given client controller.
-	 *
-	 * The user can call this function with \b domains set to NULL and \b array_size set to 0 to get the
-	 * number of memory domains used by client controller
-	 *
-	 * \param ctrlr Opaque handle to the Client controller.
-	 * \param domains Pointer to an array of memory domains to be filled by this function. The user should allocate big enough
-	 * array to keep all memory domains used by client controller
-	 * \param array_size size of \b domains array
-	 * \return the number of entries in \b domains array or negated errno. If returned value is bigger than \b array_size passed by the user
-	 * then the user should increase the size of \b domains array and call this function again. There is no guarantees that
-	 * the content of \b domains array is valid in that case.
-	 *         -EINVAL if input parameters were invalid
-
-	 */
-	int spdk_client_ctrlr_get_memory_domains(const struct spdk_client_ctrlr *ctrlr,
-											 struct spdk_memory_domain **domains, int array_size);
-
-	/**
 	 * Opaque handle for a transport poll group. Used by the transport function table.
 	 */
 	struct spdk_client_transport_poll_group;
