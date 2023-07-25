@@ -550,12 +550,6 @@ struct spdk_client_ctrlr_process
 
 #define SPDK_CLIENT_MAX_OPC 0xff
 
-struct spdk_client_ns_list
-{
-	uint32_t ns_list[1024];
-};
-SPDK_STATIC_ASSERT(sizeof(struct spdk_client_ns_list) == 4096, "Incorrect size");
-
 /*
  * One of these per allocated PCI device.
  */

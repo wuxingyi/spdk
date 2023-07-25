@@ -2700,6 +2700,7 @@ client_rdma_cq_process_completions(struct ibv_cq *cq, uint32_t batch_size,
 					continue;
 				}
 				reaped++;
+				SPDK_ERRLOG("Reaped %d\n", reaped);
 				rqpair->num_completions++;
 			}
 			break;
@@ -2803,6 +2804,7 @@ static int
 client_rdma_qpair_process_completions(struct spdk_client_qpair *qpair,
 									  uint32_t max_completions)
 {
+	SPDK_ERRLOG("client_rdma_qpair_process_completions\n");
 	struct client_rdma_qpair *rqpair = client_rdma_qpair(qpair);
 	int rc = 0, batch_size;
 	struct ibv_cq *cq;
