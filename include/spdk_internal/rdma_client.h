@@ -753,9 +753,6 @@ void client_qpair_abort_all_queued_reqs(struct spdk_client_qpair *qpair, uint32_
 uint32_t client_qpair_abort_queued_reqs_with_cbarg(struct spdk_client_qpair *qpair, void *cmd_cb_arg);
 void client_qpair_abort_queued_reqs(struct spdk_client_qpair *qpair, uint32_t dnr);
 void client_qpair_resubmit_requests(struct spdk_client_qpair *qpair, uint32_t num_requests);
-int client_fabric_qpair_connect(struct spdk_client_qpair *qpair, uint32_t num_entries);
-int client_fabric_qpair_connect_async(struct spdk_client_qpair *qpair, uint32_t num_entries);
-int client_fabric_qpair_connect_poll(struct spdk_client_qpair *qpair);
 
 #define CLIENT_INIT_REQUEST(req, _cb_fn, _cb_arg, _payload, _payload_size, _md_size) \
 	do                                                                               \
@@ -987,7 +984,6 @@ const struct spdk_client_transport *client_get_transport(const char *transport_n
 const struct spdk_client_transport *client_get_first_transport(void);
 const struct spdk_client_transport *client_get_next_transport(const struct spdk_client_transport
 																  *transport);
-void client_ctrlr_update_namespaces(struct spdk_client_ctrlr *ctrlr);
 
 /* Transport specific functions */
 struct spdk_client_ctrlr *client_transport_ctrlr_construct(const char *trstring,
@@ -995,7 +991,6 @@ struct spdk_client_ctrlr *client_transport_ctrlr_construct(const char *trstring,
 														   void *devhandle);
 int client_transport_ctrlr_destruct(struct spdk_client_ctrlr *ctrlr);
 
-uint32_t client_transport_ctrlr_get_max_xfer_size(struct spdk_client_ctrlr *ctrlr);
 uint16_t client_transport_ctrlr_get_max_sges(struct spdk_client_ctrlr *ctrlr);
 struct spdk_client_qpair *client_transport_ctrlr_create_io_qpair(struct spdk_client_ctrlr *ctrlr,
 																 uint16_t qid, const struct spdk_client_io_qpair_opts *opts);
@@ -1032,12 +1027,6 @@ void client_transport_poll_group_free_stats(struct spdk_client_transport_poll_gr
 											struct spdk_client_transport_poll_group_stat *stats);
 enum spdk_client_transport_type client_transport_get_trtype(const struct spdk_client_transport
 																*transport);
-
-static inline bool
-_is_page_aligned(uint64_t address, uint64_t page_size)
-{
-	return (address & (page_size - 1)) == 0;
-}
 
 #ifdef __cplusplus
 }
