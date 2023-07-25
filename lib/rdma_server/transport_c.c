@@ -191,99 +191,6 @@ client_transport_ctrlr_get_max_sges(struct spdk_client_ctrlr *ctrlr)
 	return transport->ops.ctrlr_get_max_sges(ctrlr);
 }
 
-int client_transport_ctrlr_reserve_cmb(struct spdk_client_ctrlr *ctrlr)
-{
-	const struct spdk_client_transport *transport = client_get_transport(ctrlr->trstring);
-
-	assert(transport != NULL);
-	if (transport->ops.ctrlr_reserve_cmb != NULL)
-	{
-		return transport->ops.ctrlr_reserve_cmb(ctrlr);
-	}
-
-	return -ENOTSUP;
-}
-
-void *
-client_transport_ctrlr_map_cmb(struct spdk_client_ctrlr *ctrlr, size_t *size)
-{
-	const struct spdk_client_transport *transport = client_get_transport(ctrlr->trstring);
-
-	assert(transport != NULL);
-	if (transport->ops.ctrlr_map_cmb != NULL)
-	{
-		return transport->ops.ctrlr_map_cmb(ctrlr, size);
-	}
-
-	return NULL;
-}
-
-int client_transport_ctrlr_unmap_cmb(struct spdk_client_ctrlr *ctrlr)
-{
-	const struct spdk_client_transport *transport = client_get_transport(ctrlr->trstring);
-
-	assert(transport != NULL);
-	if (transport->ops.ctrlr_unmap_cmb != NULL)
-	{
-		return transport->ops.ctrlr_unmap_cmb(ctrlr);
-	}
-
-	return 0;
-}
-
-int client_transport_ctrlr_enable_pmr(struct spdk_client_ctrlr *ctrlr)
-{
-	const struct spdk_client_transport *transport = client_get_transport(ctrlr->trstring);
-
-	assert(transport != NULL);
-	if (transport->ops.ctrlr_enable_pmr != NULL)
-	{
-		return transport->ops.ctrlr_enable_pmr(ctrlr);
-	}
-
-	return -ENOSYS;
-}
-
-int client_transport_ctrlr_disable_pmr(struct spdk_client_ctrlr *ctrlr)
-{
-	const struct spdk_client_transport *transport = client_get_transport(ctrlr->trstring);
-
-	assert(transport != NULL);
-	if (transport->ops.ctrlr_disable_pmr != NULL)
-	{
-		return transport->ops.ctrlr_disable_pmr(ctrlr);
-	}
-
-	return -ENOSYS;
-}
-
-void *
-client_transport_ctrlr_map_pmr(struct spdk_client_ctrlr *ctrlr, size_t *size)
-{
-	const struct spdk_client_transport *transport = client_get_transport(ctrlr->trstring);
-
-	assert(transport != NULL);
-	if (transport->ops.ctrlr_map_pmr != NULL)
-	{
-		return transport->ops.ctrlr_map_pmr(ctrlr, size);
-	}
-
-	return NULL;
-}
-
-int client_transport_ctrlr_unmap_pmr(struct spdk_client_ctrlr *ctrlr)
-{
-	const struct spdk_client_transport *transport = client_get_transport(ctrlr->trstring);
-
-	assert(transport != NULL);
-	if (transport->ops.ctrlr_unmap_pmr != NULL)
-	{
-		return transport->ops.ctrlr_unmap_pmr(ctrlr);
-	}
-
-	return -ENOSYS;
-}
-
 struct spdk_client_qpair *
 client_transport_ctrlr_create_io_qpair(struct spdk_client_ctrlr *ctrlr, uint16_t qid,
 									   const struct spdk_client_io_qpair_opts *opts)
@@ -520,17 +427,6 @@ client_transport_qpair_process_completions(struct spdk_client_qpair *qpair, uint
 	transport = client_get_transport(qpair->ctrlr->trstring);
 	assert(transport != NULL);
 	return transport->ops.qpair_process_completions(qpair, max_completions);
-}
-
-int client_transport_qpair_iterate_requests(struct spdk_client_qpair *qpair,
-											int (*iter_fn)(struct client_request *req, void *arg),
-											void *arg)
-{
-	const struct spdk_client_transport *transport;
-
-	transport = client_get_transport(qpair->ctrlr->trstring);
-	assert(transport != NULL);
-	return transport->ops.qpair_iterate_requests(qpair, iter_fn, arg);
 }
 
 struct spdk_client_transport_poll_group *

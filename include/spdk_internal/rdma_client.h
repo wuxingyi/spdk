@@ -1463,13 +1463,7 @@ uint32_t client_transport_ctrlr_get_max_xfer_size(struct spdk_client_ctrlr *ctrl
 uint16_t client_transport_ctrlr_get_max_sges(struct spdk_client_ctrlr *ctrlr);
 struct spdk_client_qpair *client_transport_ctrlr_create_io_qpair(struct spdk_client_ctrlr *ctrlr,
 																 uint16_t qid, const struct spdk_client_io_qpair_opts *opts);
-int client_transport_ctrlr_reserve_cmb(struct spdk_client_ctrlr *ctrlr);
-void *client_transport_ctrlr_map_cmb(struct spdk_client_ctrlr *ctrlr, size_t *size);
-int client_transport_ctrlr_unmap_cmb(struct spdk_client_ctrlr *ctrlr);
-int client_transport_ctrlr_enable_pmr(struct spdk_client_ctrlr *ctrlr);
-int client_transport_ctrlr_disable_pmr(struct spdk_client_ctrlr *ctrlr);
-void *client_transport_ctrlr_map_pmr(struct spdk_client_ctrlr *ctrlr, size_t *size);
-int client_transport_ctrlr_unmap_pmr(struct spdk_client_ctrlr *ctrlr);
+
 void client_transport_ctrlr_delete_io_qpair(struct spdk_client_ctrlr *ctrlr,
 											struct spdk_client_qpair *qpair);
 int client_transport_ctrlr_connect_qpair(struct spdk_client_ctrlr *ctrlr,
@@ -1482,10 +1476,6 @@ int client_transport_qpair_reset(struct spdk_client_qpair *qpair);
 int client_transport_qpair_submit_request(struct spdk_client_qpair *qpair, struct client_request *req);
 int32_t client_transport_qpair_process_completions(struct spdk_client_qpair *qpair,
 												   uint32_t max_completions);
-int client_transport_qpair_iterate_requests(struct spdk_client_qpair *qpair,
-											int (*iter_fn)(struct client_request *req, void *arg),
-											void *arg);
-
 struct spdk_client_transport_poll_group *client_transport_poll_group_create(
 	const struct spdk_client_transport *transport);
 struct spdk_client_transport_poll_group *client_transport_qpair_get_optimal_poll_group(
