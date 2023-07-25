@@ -353,14 +353,6 @@ spdk_client_ctrlr_alloc_io_qpair(struct spdk_client_ctrlr *ctrlr,
 	struct spdk_client_qpair *qpair;
 	struct spdk_client_io_qpair_opts opts;
 	int rc;
-
-	if (spdk_unlikely(ctrlr->state != CLIENT_CTRLR_STATE_READY))
-	{
-		/* When controller is resetting or initializing, free_io_qids is deleted or not created yet.
-		 * We can't create IO qpair in that case */
-		return NULL;
-	}
-
 	/*
 	 * Get the default options, then overwrite them with the user-provided options
 	 * up to opts_size.
@@ -435,13 +427,6 @@ spdk_client_ctrlr_alloc_io_qpair_async(struct spdk_client_ctrlr *ctrlr,
 	struct spdk_client_qpair *qpair;
 	struct spdk_client_io_qpair_opts opts;
 	int rc;
-
-	if (spdk_unlikely(ctrlr->state != CLIENT_CTRLR_STATE_READY))
-	{
-		/* When controller is resetting or initializing, free_io_qids is deleted or not created yet.
-		 * We can't create IO qpair in that case */
-		return NULL;
-	}
 
 	/*
 	 * Get the default options, then overwrite them with the user-provided options

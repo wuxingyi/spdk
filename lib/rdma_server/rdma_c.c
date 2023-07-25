@@ -2578,12 +2578,6 @@ client_rdma_qpair_check_timeout(struct spdk_client_qpair *qpair)
 	struct spdk_client_ctrlr *ctrlr = qpair->ctrlr;
 	struct spdk_client_ctrlr_process *active_proc;
 
-	/* Don't check timeouts during controller initialization. */
-	if (ctrlr->state != CLIENT_CTRLR_STATE_READY)
-	{
-		return;
-	}
-
 	active_proc = qpair->active_proc;
 
 	/* Only check timeouts if the current process has a timeout callback. */
