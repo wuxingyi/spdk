@@ -107,106 +107,7 @@ enum spdk_client_data_transfer
 	SPDK_CLIENT_DATA_BIDIRECTIONAL = 3
 };
 
-/*
- * Some Intel devices support vendor-unique read latency log page even
- * though the log page directory says otherwise.
- */
-#define CLIENT_INTEL_QUIRK_READ_LATENCY 0x1
 
-/*
- * Some Intel devices support vendor-unique write latency log page even
- * though the log page directory says otherwise.
- */
-#define CLIENT_INTEL_QUIRK_WRITE_LATENCY 0x2
-
-/*
- * The controller needs a delay before starts checking the device
- * readiness, which is done by reading the CLIENT_CSTS_RDY bit.
- */
-#define CLIENT_QUIRK_DELAY_BEFORE_CHK_RDY 0x4
-
-/*
- * The controller performs best when I/O is split on particular
- * LBA boundaries.
- */
-#define CLIENT_INTEL_QUIRK_STRIPING 0x8
-
-/*
- * The controller needs a delay after allocating an I/O queue pair
- * before it is ready to accept I/O commands.
- */
-#define CLIENT_QUIRK_DELAY_AFTER_QUEUE_ALLOC 0x10
-
-/*
- * Earlier Client devices do not indicate whether unmapped blocks
- * will read all zeroes or not. This define indicates that the
- * device does in fact read all zeroes after an unmap event
- */
-#define CLIENT_QUIRK_READ_ZERO_AFTER_DEALLOCATE 0x20
-
-/*
- * The controller doesn't handle Identify value others than 0 or 1 correctly.
- */
-#define CLIENT_QUIRK_IDENTIFY_CNS 0x40
-
-/*
- * The controller supports Open Channel command set if matching additional
- * condition, like the first byte (value 0x1) in the vendor specific
- * bits of the namespace identify structure is set.
- */
-#define CLIENT_QUIRK_OCSSD 0x80
-
-/*
- * The controller has an Intel vendor ID but does not support Intel vendor-specific
- * log pages.  This is primarily for QEMU emulated SSDs which report an Intel vendor
- * ID but do not support these log pages.
- */
-#define CLIENT_INTEL_QUIRK_NO_LOG_PAGES 0x100
-
-/*
- * The controller does not set SHST_COMPLETE in a reasonable amount of time.  This
- * is primarily seen in virtual VMWare Client SSDs.  This quirk merely adds an additional
- * error message that on VMWare Client SSDs, the shutdown timeout may be expected.
- */
-#define CLIENT_QUIRK_SHST_COMPLETE 0x200
-
-/*
- * The controller requires an extra delay before starting the initialization process
- * during attach.
- */
-#define CLIENT_QUIRK_DELAY_BEFORE_INIT 0x400
-
-/*
- * Some SSDs exhibit poor performance with the default SPDK Client IO queue size.
- * This quirk will increase the default to 1024 which matches other operating
- * systems, at the cost of some extra memory usage.  Users can still override
- * the increased default by changing the spdk_client_io_qpair_opts when allocating
- * a new queue pair.
- */
-#define CLIENT_QUIRK_MINIMUM_IO_QUEUE_SIZE 0x800
-
-/**
- * The maximum access width to PCI memory space is 8 Bytes, don't use AVX2 or
- * SSE instructions to optimize the memory access(memcpy or memset) larger than
- * 8 Bytes.
- */
-#define CLIENT_QUIRK_MAXIMUM_PCI_ACCESS_WIDTH 0x1000
-
-/**
- * The SSD does not support OPAL even through it sets the security bit in OACS.
- */
-#define CLIENT_QUIRK_OACS_SECURITY 0x2000
-
-/**
- * Intel P55XX SSDs can't support Dataset Management command with SGL format,
- * so use PRP with DSM command.
- */
-#define CLIENT_QUIRK_NO_SGL_FOR_DSM 0x4000
-
-/**
- * Maximum Data Transfer Size(MDTS) excludes interleaved metadata.
- */
-#define CLIENT_QUIRK_MDTS_EXCLUDE_MD 0x8000
 
 #define CLIENT_MAX_ASYNC_EVENTS (8)
 
@@ -1334,7 +1235,6 @@ struct spdk_client_ctrlr
 
 	struct spdk_client_ctrlr_opts opts;
 
-	uint64_t quirks;
 
 	/* Extra sleep time during controller initialization */
 	uint64_t sleep_timeout_tsc;
@@ -1843,7 +1743,6 @@ client_request_free_children(struct client_request *req)
 
 int client_request_check_timeout(struct client_request *req, uint16_t cid,
 								 struct spdk_client_ctrlr_process *active_proc, uint64_t now_tick);
-uint64_t client_get_quirks(const struct spdk_pci_id *id);
 
 int client_robust_mutex_init_shared(pthread_mutex_t *mtx);
 int client_robust_mutex_init_recursive_shared(pthread_mutex_t *mtx);

@@ -344,11 +344,6 @@ int spdk_client_ctrlr_connect_io_qpair(struct spdk_client_ctrlr *ctrlr, struct s
 	rc = client_transport_ctrlr_connect_qpair(ctrlr, qpair);
 	client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
 
-	if (ctrlr->quirks & CLIENT_QUIRK_DELAY_AFTER_QUEUE_ALLOC)
-	{
-		spdk_delay_us(100);
-	}
-
 	return rc;
 }
 
@@ -364,11 +359,6 @@ int spdk_client_ctrlr_connect_io_qpair_async(struct spdk_client_ctrlr *ctrlr, st
 	client_robust_mutex_lock(&ctrlr->ctrlr_lock);
 	rc = client_transport_ctrlr_connect_qpair_async(ctrlr, qpair);
 	client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
-
-	if (ctrlr->quirks & CLIENT_QUIRK_DELAY_AFTER_QUEUE_ALLOC)
-	{
-		spdk_delay_us(100);
-	}
 
 	return rc;
 }
@@ -781,10 +771,6 @@ client_ctrlr_shutdown_poll_async(struct spdk_client_ctrlr *ctrlr,
 
 	CLIENT_CTRLR_ERRLOG(ctrlr, "did not shutdown within %u milliseconds\n",
 						ctx->shutdown_timeout_ms);
-	if (ctrlr->quirks & CLIENT_QUIRK_SHST_COMPLETE)
-	{
-		CLIENT_CTRLR_ERRLOG(ctrlr, "likely due to shutdown handling in the VMWare emulated Client SSD\n");
-	}
 
 	return 0;
 }
@@ -1523,20 +1509,6 @@ int client_ctrlr_process_init(struct spdk_client_ctrlr *ctrlr)
 	{
 	case CLIENT_CTRLR_STATE_INIT_DELAY:
 		client_ctrlr_set_state(ctrlr, CLIENT_CTRLR_STATE_INIT, CLIENT_TIMEOUT_INFINITE);
-		if (ctrlr->quirks & CLIENT_QUIRK_DELAY_BEFORE_INIT)
-		{
-			/*
-			 * Controller may need some delay before it's enabled.
-			 *
-			 * This is a workaround for an issue where the PCIe-attached Client controller
-			 * is not ready after VFIO reset. We delay the initialization rather than the
-			 * enabling itself, because this is required only for the very first enabling
-			 * - directly after a VFIO reset.
-			 */
-			CLIENT_CTRLR_DEBUGLOG(ctrlr, "Adding 2 second delay before initializing the controller\n");
-			ctrlr->sleep_timeout_tsc = ticks + (2000 * spdk_get_ticks_hz() / 1000);
-		}
-		break;
 
 	case CLIENT_CTRLR_STATE_READY:
 		CLIENT_CTRLR_DEBUGLOG(ctrlr, "Ctrlr already in ready state\n");
