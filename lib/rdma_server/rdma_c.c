@@ -2547,7 +2547,8 @@ client_rdma_qpair_abort_reqs(struct spdk_client_qpair *qpair, uint32_t dnr)
 	struct spdk_req_cpl cpl;
 	struct client_rdma_qpair *rqpair = client_rdma_qpair(qpair);
 
-	cpl.status.sc = SPDK_CLIENT_SC_ABORTED_SQ_DELETION;
+	//(fixme wuxingyi)
+	cpl.status.sc = SPDK_CLIENT_SC_QUEUE_ABORTED;
 	cpl.status.sct = SPDK_CLIENT_SCT_GENERIC;
 	cpl.status.dnr = dnr;
 

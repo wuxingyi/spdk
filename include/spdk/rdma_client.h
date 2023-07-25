@@ -48,12 +48,7 @@ extern "C"
 
 #include "spdk/env.h"
 #include "spdk/rdma_common.h"
-#define SPDK_CLIENT_TRANSPORT_NAME_FC "FC"
-#define SPDK_CLIENT_TRANSPORT_NAME_PCIE "PCIE"
 #define SPDK_CLIENT_TRANSPORT_NAME_RDMA "RDMA"
-#define SPDK_CLIENT_TRANSPORT_NAME_TCP "TCP"
-#define SPDK_CLIENT_TRANSPORT_NAME_VFIOUSER "VFIOUSER"
-#define SPDK_CLIENT_TRANSPORT_NAME_CUSTOM "CUSTOM"
 
 #define SPDK_SRV_PRIORITY_MAX_LEN 4
 #define SPDK_SRV_MEMORY_POOL_ELEMENT_SIZE 4096
@@ -671,16 +666,6 @@ extern "C"
 	 * values on failure.
 	 */
 	int spdk_client_transport_id_parse(struct spdk_client_transport_id *trid, const char *str);
-
-	/**
-	 * Fill in the trtype and trstring fields of this trid based on a known transport type.
-	 *
-	 * \param trid The trid to fill out.
-	 * \param trtype The transport type to use for filling the trid fields. Only valid for
-	 * transport types referenced in the Client-oF spec.
-	 */
-	void spdk_client_trid_populate_transport(struct spdk_client_transport_id *trid,
-											 enum spdk_client_transport_type trtype);
 
 	/**
 	 * Parse the string representation of a host ID.
@@ -3503,24 +3488,6 @@ extern "C"
 	 * \return Returns status as an ASCII string.
 	 */
 	const char *spdk_req_cpl_get_status_string(const struct spdk_req_status *status);
-
-	/**
-	 * \brief Prints (SPDK_NOTICELOG) the contents of an Client submission queue entry (command).
-	 *
-	 * \param qpair Pointer to the Client queue pair - used to determine admin versus I/O queue.
-	 * \param cmd Pointer to the submission queue command to be formatted.
-	 */
-	void spdk_client_qpair_print_command(struct spdk_client_qpair *qpair,
-										 struct spdk_req_cmd *cmd);
-
-	/**
-	 * \brief Prints (SPDK_NOTICELOG) the contents of an Client completion queue entry.
-	 *
-	 * \param qpair Pointer to the Client queue pair - presently unused.
-	 * \param cpl Pointer to the completion queue element to be formatted.
-	 */
-	void spdk_client_qpair_print_completion(struct spdk_client_qpair *qpair,
-											struct spdk_req_cpl *cpl);
 
 	/**
 	 * \brief Gets the Client qpair ID for the specified qpair.

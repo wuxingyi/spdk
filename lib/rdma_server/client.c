@@ -690,24 +690,6 @@ client_ctrlr_shutdown_poll_async(struct spdk_client_ctrlr *ctrlr,
 	return 0;
 }
 
-static void
-client_ctrlr_abort_queued_aborts(struct spdk_client_ctrlr *ctrlr)
-{
-	struct client_request *req, *tmp;
-	struct spdk_req_cpl cpl = {};
-
-	cpl.status.sc = SPDK_CLIENT_SC_ABORTED_SQ_DELETION;
-	cpl.status.sct = SPDK_CLIENT_SCT_GENERIC;
-
-	STAILQ_FOREACH_SAFE(req, &ctrlr->queued_aborts, stailq, tmp)
-	{
-		STAILQ_REMOVE_HEAD(&ctrlr->queued_aborts, stailq);
-
-		client_complete_request(req->cb_fn, req->cb_arg, req->qpair, req, &cpl);
-		client_free_request(req);
-	}
-}
-
 int spdk_client_ctrlr_disconnect(struct spdk_client_ctrlr *ctrlr)
 {
 	struct spdk_client_qpair *qpair;
@@ -730,9 +712,6 @@ int spdk_client_ctrlr_disconnect(struct spdk_client_ctrlr *ctrlr)
 	ctrlr->is_failed = false;
 
 	CLIENT_CTRLR_NOTICELOG(ctrlr, "resetting controller\n");
-
-	/* Abort all of the queued abort requests */
-	client_ctrlr_abort_queued_aborts(ctrlr);
 
 	/* Disable all queues before disabling the controller hardware. */
 	TAILQ_FOREACH(qpair, &ctrlr->active_io_qpairs, tailq)
@@ -1060,8 +1039,6 @@ void client_ctrlr_destruct_async(struct spdk_client_ctrlr *ctrlr,
 	CLIENT_CTRLR_DEBUGLOG(ctrlr, "Prepare to destruct SSD\n");
 
 	ctrlr->is_destructed = true;
-
-	client_ctrlr_abort_queued_aborts(ctrlr);
 
 	TAILQ_FOREACH_SAFE(qpair, &ctrlr->active_io_qpairs, tailq, tmp)
 	{

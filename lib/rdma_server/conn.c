@@ -127,224 +127,6 @@ client_get_sgl(char *buf, size_t size, struct spdk_req_cmd *cmd)
 }
 
 static void
-client_get_prp(char *buf, size_t size, struct spdk_req_cmd *cmd)
-{
-	snprintf(buf, size, "PRP1 0x%" PRIx64 " PRP2 0x%" PRIx64, cmd->dptr.prp.prp1, cmd->dptr.prp.prp2);
-}
-
-static void
-client_get_dptr(char *buf, size_t size, struct spdk_req_cmd *cmd)
-{
-	if (spdk_client_opc_get_data_transfer(cmd->opc) != SPDK_CLIENT_DATA_NONE)
-	{
-		switch (cmd->psdt)
-		{
-		case SPDK_CLIENT_PSDT_PRP:
-			client_get_prp(buf, size, cmd);
-			break;
-		case SPDK_CLIENT_PSDT_SGL_MPTR_CONTIG:
-		case SPDK_CLIENT_PSDT_SGL_MPTR_SGL:
-			client_get_sgl(buf, size, cmd);
-			break;
-		default:;
-		}
-	}
-}
-
-static void
-client_io_qpair_print_command(uint16_t qid, struct spdk_req_cmd *cmd)
-{
-	char dptr[CLIENT_CMD_DPTR_STR_SIZE] = {'\0'};
-
-	assert(cmd != NULL);
-
-	client_get_dptr(dptr, sizeof(dptr), cmd);
-
-	switch ((int)cmd->opc)
-	{
-	case SPDK_CLIENT_OPC_WRITE:
-	case SPDK_CLIENT_OPC_READ:
-	case SPDK_CLIENT_OPC_RPC_WRITE:
-	case SPDK_CLIENT_OPC_RPC_READ:
-		SPDK_NOTICELOG("%s sqid:%d cid:%d "
-					   "lba:%llu len:%d %s\n",
-					   client_get_string(io_opcode, cmd->opc), qid, cmd->cid,
-					   ((unsigned long long)cmd->cdw11 << 32) + cmd->cdw10,
-					   (cmd->cdw12 & 0xFFFF) + 1, dptr);
-		break;
-	case SPDK_CLIENT_OPC_FLUSH:
-		SPDK_NOTICELOG("%s sqid:%d cid:%d\n",
-					   client_get_string(io_opcode, cmd->opc), qid, cmd->cid);
-		break;
-	default:
-		SPDK_NOTICELOG("%s (%02x) sqid:%d cid:%d\n",
-					   client_get_string(io_opcode, cmd->opc), cmd->opc, qid, cmd->cid);
-		break;
-	}
-}
-
-void spdk_client_print_command(uint16_t qid, struct spdk_req_cmd *cmd)
-{
-	assert(cmd != NULL);
-
-	client_io_qpair_print_command(qid, cmd);
-}
-
-void spdk_client_qpair_print_command(struct spdk_client_qpair *qpair, struct spdk_req_cmd *cmd)
-{
-	assert(qpair != NULL);
-	assert(cmd != NULL);
-
-	spdk_client_print_command(qpair->id, cmd);
-}
-
-static const struct client_string generic_status[] = {
-	{SPDK_CLIENT_SC_SUCCESS, "SUCCESS"},
-	{SPDK_CLIENT_SC_INVALID_OPCODE, "INVALID OPCODE"},
-	{SPDK_CLIENT_SC_INVALID_FIELD, "INVALID FIELD"},
-	{SPDK_CLIENT_SC_COMMAND_ID_CONFLICT, "COMMAND ID CONFLICT"},
-	{SPDK_CLIENT_SC_DATA_TRANSFER_ERROR, "DATA TRANSFER ERROR"},
-	{SPDK_CLIENT_SC_ABORTED_POWER_LOSS, "ABORTED - POWER LOSS"},
-	{SPDK_CLIENT_SC_INTERNAL_DEVICE_ERROR, "INTERNAL DEVICE ERROR"},
-	{SPDK_CLIENT_SC_ABORTED_BY_REQUEST, "ABORTED - BY REQUEST"},
-	{SPDK_CLIENT_SC_ABORTED_SQ_DELETION, "ABORTED - SQ DELETION"},
-	{SPDK_CLIENT_SC_ABORTED_FAILED_FUSED, "ABORTED - FAILED FUSED"},
-	{SPDK_CLIENT_SC_ABORTED_MISSING_FUSED, "ABORTED - MISSING FUSED"},
-	{SPDK_CLIENT_SC_INVALID_NAMESPACE_OR_FORMAT, "INVALID NAMESPACE OR FORMAT"},
-	{SPDK_CLIENT_SC_COMMAND_SEQUENCE_ERROR, "COMMAND SEQUENCE ERROR"},
-	{SPDK_CLIENT_SC_INVALID_SGL_SEG_DESCRIPTOR, "INVALID SGL SEGMENT DESCRIPTOR"},
-	{SPDK_CLIENT_SC_INVALID_NUM_SGL_DESCIRPTORS, "INVALID NUMBER OF SGL DESCRIPTORS"},
-	{SPDK_CLIENT_SC_DATA_SGL_LENGTH_INVALID, "DATA SGL LENGTH INVALID"},
-	{SPDK_CLIENT_SC_METADATA_SGL_LENGTH_INVALID, "METADATA SGL LENGTH INVALID"},
-	{SPDK_CLIENT_SC_SGL_DESCRIPTOR_TYPE_INVALID, "SGL DESCRIPTOR TYPE INVALID"},
-	{SPDK_CLIENT_SC_INVALID_CONTROLLER_MEM_BUF, "INVALID CONTROLLER MEMORY BUFFER"},
-	{SPDK_CLIENT_SC_INVALID_PRP_OFFSET, "INVALID PRP OFFSET"},
-	{SPDK_CLIENT_SC_ATOMIC_WRITE_UNIT_EXCEEDED, "ATOMIC WRITE UNIT EXCEEDED"},
-	{SPDK_CLIENT_SC_OPERATION_DENIED, "OPERATION DENIED"},
-	{SPDK_CLIENT_SC_INVALID_SGL_OFFSET, "INVALID SGL OFFSET"},
-	{SPDK_CLIENT_SC_HOSTID_INCONSISTENT_FORMAT, "HOSTID INCONSISTENT FORMAT"},
-	{SPDK_CLIENT_SC_ABORTED_PREEMPT, "ABORTED - PREEMPT AND ABORT"},
-	{SPDK_CLIENT_SC_SANITIZE_FAILED, "SANITIZE FAILED"},
-	{SPDK_CLIENT_SC_SANITIZE_IN_PROGRESS, "SANITIZE IN PROGRESS"},
-	{SPDK_CLIENT_SC_SGL_DATA_BLOCK_GRANULARITY_INVALID, "DATA BLOCK GRANULARITY INVALID"},
-	{SPDK_CLIENT_SC_COMMAND_INVALID_IN_CMB, "COMMAND NOT SUPPORTED FOR QUEUE IN CMB"},
-	{SPDK_CLIENT_SC_LBA_OUT_OF_RANGE, "LBA OUT OF RANGE"},
-	{SPDK_CLIENT_SC_CAPACITY_EXCEEDED, "CAPACITY EXCEEDED"},
-	{SPDK_CLIENT_SC_NAMESPACE_NOT_READY, "NAMESPACE NOT READY"},
-	{SPDK_CLIENT_SC_RESERVATION_CONFLICT, "RESERVATION CONFLICT"},
-	{SPDK_CLIENT_SC_FORMAT_IN_PROGRESS, "FORMAT IN PROGRESS"},
-	{0xFFFF, "GENERIC"}};
-
-static const struct client_string command_specific_status[] = {
-	{SPDK_CLIENT_SC_COMPLETION_QUEUE_INVALID, "INVALID COMPLETION QUEUE"},
-	{SPDK_CLIENT_SC_INVALID_QUEUE_IDENTIFIER, "INVALID QUEUE IDENTIFIER"},
-	{SPDK_CLIENT_SC_INVALID_QUEUE_SIZE, "INVALID QUEUE SIZE"},
-	{SPDK_CLIENT_SC_ABORT_COMMAND_LIMIT_EXCEEDED, "ABORT CMD LIMIT EXCEEDED"},
-	{SPDK_CLIENT_SC_ASYNC_EVENT_REQUEST_LIMIT_EXCEEDED, "ASYNC LIMIT EXCEEDED"},
-	{SPDK_CLIENT_SC_INVALID_FIRMWARE_SLOT, "INVALID FIRMWARE SLOT"},
-	{SPDK_CLIENT_SC_INVALID_FIRMWARE_IMAGE, "INVALID FIRMWARE IMAGE"},
-	{SPDK_CLIENT_SC_INVALID_INTERRUPT_VECTOR, "INVALID INTERRUPT VECTOR"},
-	{SPDK_CLIENT_SC_INVALID_LOG_PAGE, "INVALID LOG PAGE"},
-	{SPDK_CLIENT_SC_INVALID_FORMAT, "INVALID FORMAT"},
-	{SPDK_CLIENT_SC_FIRMWARE_REQ_CONVENTIONAL_RESET, "FIRMWARE REQUIRES CONVENTIONAL RESET"},
-	{SPDK_CLIENT_SC_INVALID_QUEUE_DELETION, "INVALID QUEUE DELETION"},
-	{SPDK_CLIENT_SC_FEATURE_ID_NOT_SAVEABLE, "FEATURE ID NOT SAVEABLE"},
-	{SPDK_CLIENT_SC_FEATURE_NOT_CHANGEABLE, "FEATURE NOT CHANGEABLE"},
-	{SPDK_CLIENT_SC_FEATURE_NOT_NAMESPACE_SPECIFIC, "FEATURE NOT NAMESPACE SPECIFIC"},
-	{SPDK_CLIENT_SC_FIRMWARE_REQ_NVM_RESET, "FIRMWARE REQUIRES NVM RESET"},
-	{SPDK_CLIENT_SC_FIRMWARE_REQ_RESET, "FIRMWARE REQUIRES RESET"},
-	{SPDK_CLIENT_SC_FIRMWARE_REQ_MAX_TIME_VIOLATION, "FIRMWARE REQUIRES MAX TIME VIOLATION"},
-	{SPDK_CLIENT_SC_FIRMWARE_ACTIVATION_PROHIBITED, "FIRMWARE ACTIVATION PROHIBITED"},
-	{SPDK_CLIENT_SC_OVERLAPPING_RANGE, "OVERLAPPING RANGE"},
-	{SPDK_CLIENT_SC_NAMESPACE_INSUFFICIENT_CAPACITY, "NAMESPACE INSUFFICIENT CAPACITY"},
-	{SPDK_CLIENT_SC_NAMESPACE_ID_UNAVAILABLE, "NAMESPACE ID UNAVAILABLE"},
-	{SPDK_CLIENT_SC_NAMESPACE_ALREADY_ATTACHED, "NAMESPACE ALREADY ATTACHED"},
-	{SPDK_CLIENT_SC_NAMESPACE_IS_PRIVATE, "NAMESPACE IS PRIVATE"},
-	{SPDK_CLIENT_SC_NAMESPACE_NOT_ATTACHED, "NAMESPACE NOT ATTACHED"},
-	{SPDK_CLIENT_SC_THINPROVISIONING_NOT_SUPPORTED, "THINPROVISIONING NOT SUPPORTED"},
-	{SPDK_CLIENT_SC_CONTROLLER_LIST_INVALID, "CONTROLLER LIST INVALID"},
-	{SPDK_CLIENT_SC_DEVICE_SELF_TEST_IN_PROGRESS, "DEVICE SELF-TEST IN PROGRESS"},
-	{SPDK_CLIENT_SC_BOOT_PARTITION_WRITE_PROHIBITED, "BOOT PARTITION WRITE PROHIBITED"},
-	{SPDK_CLIENT_SC_INVALID_CTRLR_ID, "INVALID CONTROLLER ID"},
-	{SPDK_CLIENT_SC_INVALID_SECONDARY_CTRLR_STATE, "INVALID SECONDARY CONTROLLER STATE"},
-	{SPDK_CLIENT_SC_INVALID_NUM_CTRLR_RESOURCES, "INVALID NUMBER OF CONTROLLER RESOURCES"},
-	{SPDK_CLIENT_SC_INVALID_RESOURCE_ID, "INVALID RESOURCE IDENTIFIER"},
-	{SPDK_CLIENT_SC_STREAM_RESOURCE_ALLOCATION_FAILED, "STREAM RESOURCE ALLOCATION FAILED"},
-	{SPDK_CLIENT_SC_CONFLICTING_ATTRIBUTES, "CONFLICTING ATTRIBUTES"},
-	{SPDK_CLIENT_SC_INVALID_PROTECTION_INFO, "INVALID PROTECTION INFO"},
-	{SPDK_CLIENT_SC_ATTEMPTED_WRITE_TO_RO_RANGE, "WRITE TO RO RANGE"},
-	{0xFFFF, "COMMAND SPECIFIC"}};
-
-static const struct client_string media_error_status[] = {
-	{SPDK_CLIENT_SC_WRITE_FAULTS, "WRITE FAULTS"},
-	{SPDK_CLIENT_SC_UNRECOVERED_READ_ERROR, "UNRECOVERED READ ERROR"},
-	{SPDK_CLIENT_SC_GUARD_CHECK_ERROR, "GUARD CHECK ERROR"},
-	{SPDK_CLIENT_SC_APPLICATION_TAG_CHECK_ERROR, "APPLICATION TAG CHECK ERROR"},
-	{SPDK_CLIENT_SC_REFERENCE_TAG_CHECK_ERROR, "REFERENCE TAG CHECK ERROR"},
-	{SPDK_CLIENT_SC_COMPARE_FAILURE, "COMPARE FAILURE"},
-	{SPDK_CLIENT_SC_ACCESS_DENIED, "ACCESS DENIED"},
-	{SPDK_CLIENT_SC_DEALLOCATED_OR_UNWRITTEN_BLOCK, "DEALLOCATED OR UNWRITTEN BLOCK"},
-
-	{0xFFFF, "MEDIA ERROR"}};
-
-static const struct client_string path_status[] = {
-	{SPDK_CLIENT_SC_INTERNAL_PATH_ERROR, "INTERNAL PATH ERROR"},
-	{SPDK_CLIENT_SC_CONTROLLER_PATH_ERROR, "CONTROLLER PATH ERROR"},
-	{SPDK_CLIENT_SC_HOST_PATH_ERROR, "HOST PATH ERROR"},
-	{SPDK_CLIENT_SC_ABORTED_BY_HOST, "ABORTED BY HOST"},
-	{0xFFFF, "PATH ERROR"}};
-
-const char *
-spdk_req_cpl_get_status_string(const struct spdk_req_status *status)
-{
-	const struct client_string *entry;
-
-	switch (status->sct)
-	{
-	case SPDK_CLIENT_SCT_GENERIC:
-		entry = generic_status;
-		break;
-	case SPDK_CLIENT_SCT_COMMAND_SPECIFIC:
-		entry = command_specific_status;
-		break;
-	case SPDK_CLIENT_SCT_MEDIA_ERROR:
-		entry = media_error_status;
-		break;
-	case SPDK_CLIENT_SCT_PATH:
-		entry = path_status;
-		break;
-	case SPDK_CLIENT_SCT_VENDOR_SPECIFIC:
-		return "VENDOR SPECIFIC";
-	default:
-		return "RESERVED";
-	}
-
-	return client_get_string(entry, status->sc);
-}
-
-void spdk_client_print_completion(uint16_t qid, struct spdk_req_cpl *cpl)
-{
-	assert(cpl != NULL);
-
-	/* Check that sqid matches qid. Note that sqid is reserved
-	 * for fabrics so don't print an error when sqid is 0. */
-	if (cpl->sqid != qid && cpl->sqid != 0)
-	{
-		SPDK_ERRLOG("sqid %u doesn't match qid\n", cpl->sqid);
-	}
-
-	SPDK_NOTICELOG("%s (%02x/%02x) qid:%d cid:%d cdw0:%x sqhd:%04x p:%x m:%x dnr:%x\n",
-				   spdk_req_cpl_get_status_string(&cpl->status),
-				   cpl->status.sct, cpl->status.sc, qid, cpl->cid, cpl->cdw0,
-				   cpl->sqhd, cpl->status.p, cpl->status.m, cpl->status.dnr);
-}
-
-void spdk_client_qpair_print_completion(struct spdk_client_qpair *qpair, struct spdk_req_cpl *cpl)
-{
-	spdk_client_print_completion(qpair->id, cpl);
-}
-
-static void
 client_qpair_manual_complete_request(struct spdk_client_qpair *qpair,
 									 struct client_request *req, uint32_t sct, uint32_t sc,
 									 uint32_t dnr, bool print_on_error)
@@ -362,9 +144,7 @@ client_qpair_manual_complete_request(struct spdk_client_qpair *qpair,
 
 	if (error && print_on_error && !qpair->ctrlr->opts.disable_error_logging)
 	{
-		SPDK_NOTICELOG("Command completed manually:\n");
-		spdk_client_qpair_print_command(qpair, &req->cmd);
-		spdk_client_qpair_print_completion(qpair, &cpl);
+		SPDK_NOTICELOG("Command completed manually: error occurred\n");
 	}
 
 	client_complete_request(req->cb_fn, req->cb_arg, qpair, req, &cpl);
@@ -388,8 +168,9 @@ void client_qpair_abort_queued_reqs(struct spdk_client_qpair *qpair, uint32_t dn
 		{
 			SPDK_ERRLOG("aborting queued i/o\n");
 		}
+		//(fixme)
 		client_qpair_manual_complete_request(qpair, req, SPDK_CLIENT_SCT_GENERIC,
-											 SPDK_CLIENT_SC_ABORTED_SQ_DELETION, dnr, true);
+											 SPDK_CLIENT_SC_QUEUE_ABORTED, dnr, true);
 	}
 }
 
@@ -417,8 +198,9 @@ _client_qpair_complete_abort_queued_reqs(struct spdk_client_qpair *qpair)
 	{
 		req = STAILQ_FIRST(&tmp);
 		STAILQ_REMOVE_HEAD(&tmp, stailq);
+		//(fixme) use aborted sq
 		client_qpair_manual_complete_request(qpair, req, SPDK_CLIENT_SCT_GENERIC,
-											 SPDK_CLIENT_SC_ABORTED_BY_REQUEST, 1, true);
+											 SPDK_CLIENT_SC_QUEUE_ABORTED, 1, true);
 	}
 }
 
@@ -714,7 +496,8 @@ _client_qpair_submit_request(struct spdk_client_qpair *qpair, struct client_requ
 			if (req->num_children)
 			{
 				req->cpl.status.sct = SPDK_CLIENT_SCT_GENERIC;
-				req->cpl.status.sc = SPDK_CLIENT_SC_INTERNAL_DEVICE_ERROR;
+				//(fixme wuxingyi)
+				req->cpl.status.sc = SPDK_CLIENT_SC_QUEUE_ABORTED;
 				return 0;
 			}
 			goto error;
@@ -803,8 +586,9 @@ error:
 	/* The request is from queued_req list we should trigger the callback from caller */
 	if (spdk_unlikely(req->queued))
 	{
+		//(fixme wuxingyi)
 		client_qpair_manual_complete_request(qpair, req, SPDK_CLIENT_SCT_GENERIC,
-											 SPDK_CLIENT_SC_INTERNAL_DEVICE_ERROR, true, true);
+											 SPDK_CLIENT_SC_QUEUE_ABORTED, true, true);
 		return rc;
 	}
 

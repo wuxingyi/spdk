@@ -4,37 +4,6 @@
 #include "spdk/env.h"
 #include "spdk/rdma_client.h"
 
-void spdk_client_trid_populate_transport(struct spdk_client_transport_id *trid,
-										 enum spdk_client_transport_type trtype)
-{
-	const char *trstring = "";
-
-	trid->trtype = trtype;
-	switch (trtype)
-	{
-	case SPDK_CLIENT_TRANSPORT_PCIE:
-		trstring = SPDK_CLIENT_TRANSPORT_NAME_PCIE;
-		break;
-	case SPDK_CLIENT_TRANSPORT_RDMA:
-		trstring = SPDK_CLIENT_TRANSPORT_NAME_RDMA;
-		break;
-	case SPDK_CLIENT_TRANSPORT_TCP:
-		trstring = SPDK_CLIENT_TRANSPORT_NAME_TCP;
-		break;
-	case SPDK_CLIENT_TRANSPORT_VFIOUSER:
-		trstring = SPDK_CLIENT_TRANSPORT_NAME_VFIOUSER;
-		break;
-	case SPDK_CLIENT_TRANSPORT_CUSTOM:
-		trstring = SPDK_CLIENT_TRANSPORT_NAME_CUSTOM;
-		break;
-	default:
-		SPDK_ERRLOG("no available transports\n");
-		assert(0);
-		return;
-	}
-	snprintf(trid->trstring, SPDK_SRV_TRSTRING_MAX_LEN, "%s", trstring);
-}
-
 int spdk_client_transport_id_populate_trstring(struct spdk_client_transport_id *trid, const char *trstring)
 {
 	int len, i, rc;
