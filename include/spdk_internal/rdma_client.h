@@ -755,7 +755,6 @@ struct spdk_client_ctrlr_process *client_ctrlr_get_process(struct spdk_client_ct
 														   pid_t pid);
 struct spdk_client_ctrlr_process *client_ctrlr_get_current_process(struct spdk_client_ctrlr *ctrlr);
 int client_ctrlr_add_process(struct spdk_client_ctrlr *ctrlr, void *devhandle);
-void client_ctrlr_free_processes(struct spdk_client_ctrlr *ctrlr);
 
 int client_ctrlr_construct(struct spdk_client_ctrlr *ctrlr);
 void client_ctrlr_destruct_finish(struct spdk_client_ctrlr *ctrlr);
@@ -1065,15 +1064,6 @@ void client_transport_poll_group_free_stats(struct spdk_client_transport_poll_gr
 											struct spdk_client_transport_poll_group_stat *stats);
 enum spdk_client_transport_type client_transport_get_trtype(const struct spdk_client_transport
 																*transport);
-/*
- * Below ref related functions must be called with the global
- *  driver lock held for the multi-process condition.
- *  Within these functions, the per ctrlr ctrlr_lock is also
- *  acquired for the multi-thread condition.
- */
-void client_ctrlr_proc_get_ref(struct spdk_client_ctrlr *ctrlr);
-void client_ctrlr_proc_put_ref(struct spdk_client_ctrlr *ctrlr);
-int client_ctrlr_get_ref_count(struct spdk_client_ctrlr *ctrlr);
 
 static inline bool
 _is_page_aligned(uint64_t address, uint64_t page_size)
