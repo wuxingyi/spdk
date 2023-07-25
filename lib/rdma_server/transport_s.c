@@ -748,12 +748,6 @@ void spdk_srv_trid_populate_transport(struct spdk_srv_transport_id *trid,
 	case SPDK_SRV_TRANSPORT_RDMA:
 		trstring = SPDK_SRV_TRANSPORT_NAME_RDMA;
 		break;
-	case SPDK_SRV_TRANSPORT_TCP:
-		trstring = SPDK_SRV_TRANSPORT_NAME_TCP;
-		break;
-	case SPDK_SRV_TRANSPORT_CUSTOM:
-		trstring = SPDK_SRV_TRANSPORT_NAME_CUSTOM;
-		break;
 	default:
 		SPDK_ERRLOG("no available transports\n");
 		assert(0);

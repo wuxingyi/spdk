@@ -23,12 +23,7 @@ extern "C"
 	struct spdk_srv_transport_opts;
 	struct spdk_srv_transport_id;
 
-#define SPDK_SRV_TRANSPORT_NAME_FC "FC"
-#define SPDK_SRV_TRANSPORT_NAME_PCIE "PCIE"
 #define SPDK_SRV_TRANSPORT_NAME_RDMA "RDMA"
-#define SPDK_SRV_TRANSPORT_NAME_TCP "TCP"
-#define SPDK_SRV_TRANSPORT_NAME_VFIOUSER "VFIOUSER"
-#define SPDK_SRV_TRANSPORT_NAME_CUSTOM "CUSTOM"
 
 	typedef void (*spdk_srv_state_change_done)(void *cb_arg, int status);
 	typedef void (*spdk_srv_transport_destroy_done_cb)(void *cb_arg);
@@ -715,15 +710,6 @@ extern "C"
 	spdk_srv_transport_stop_listen(struct spdk_srv_transport *transport,
 								   const struct spdk_srv_transport_id *trid);
 
-	/**
-	 * Dump poll group statistics into JSON.
-	 *
-	 * \param group The group which statistics should be dumped.
-	 * \param w The JSON write context to which statistics should be dumped.
-	 */
-	void spdk_srv_poll_group_dump_stat(struct spdk_srv_poll_group *group,
-									   struct spdk_json_write_ctx *w);
-
 	struct spdk_srv_tgt *
 	spdk_srv_tgt_create(struct spdk_srv_target_opts *opts);
 
@@ -731,9 +717,6 @@ extern "C"
 	spdk_srv_tgt_destroy(struct spdk_srv_tgt *tgt,
 						 spdk_srv_tgt_destroy_done_fn cb_fn,
 						 void *cb_arg);
-
-	struct spdk_srv_tgt *
-	spdk_srv_get_tgt(const char *name);
 
 	int
 	spdk_srv_tgt_stop_listen(struct spdk_srv_tgt *tgt,

@@ -322,56 +322,6 @@ void spdk_srv_tgt_destroy(struct spdk_srv_tgt *tgt,
 	spdk_io_device_unregister(tgt, srv_tgt_destroy_cb);
 }
 
-static const char *
-spdk_srv_tgt_get_name(struct spdk_srv_tgt *tgt)
-{
-	return tgt->name;
-}
-
-struct spdk_srv_tgt *
-spdk_srv_get_tgt(const char *name)
-{
-	struct spdk_srv_tgt *tgt;
-	uint32_t num_targets = 0;
-
-	TAILQ_FOREACH(tgt, &g_srv_tgts, link)
-	{
-		if (name)
-		{
-			if (!strncmp(tgt->name, name, SRV_TGT_NAME_MAX_LENGTH))
-			{
-				return tgt;
-			}
-		}
-		num_targets++;
-	}
-
-	/*
-	 * special case. If there is only one target and
-	 * no name was specified, return the only available
-	 * target. If there is more than one target, name must
-	 * be specified.
-	 */
-	if (!name && num_targets == 1)
-	{
-		return TAILQ_FIRST(&g_srv_tgts);
-	}
-
-	return NULL;
-}
-
-static struct spdk_srv_tgt *
-spdk_srv_get_first_tgt(void)
-{
-	return TAILQ_FIRST(&g_srv_tgts);
-}
-
-static struct spdk_srv_tgt *
-spdk_srv_get_next_tgt(struct spdk_srv_tgt *prev)
-{
-	return TAILQ_NEXT(prev, link);
-}
-
 static void
 srv_listen_opts_copy(struct spdk_srv_listen_opts *opts,
 					 const struct spdk_srv_listen_opts *opts_src, size_t opts_size)
@@ -403,44 +353,6 @@ spdk_srv_listen_opts_init(struct spdk_srv_listen_opts *opts, size_t opts_size)
 	/* local version of opts should have defaults set here */
 
 	srv_listen_opts_copy(opts, &opts_local, opts_size);
-}
-
-static int
-spdk_srv_tgt_listen_ext(struct spdk_srv_tgt *tgt, const struct spdk_srv_transport_id *trid,
-						struct spdk_srv_listen_opts *opts)
-{
-	struct spdk_srv_transport *transport;
-	int rc;
-	struct spdk_srv_listen_opts opts_local = {};
-
-	if (!opts)
-	{
-		SPDK_ERRLOG("opts should not be NULL\n");
-		return -EINVAL;
-	}
-
-	if (!opts->opts_size)
-	{
-		SPDK_ERRLOG("The opts_size in opts structure should not be zero\n");
-		return -EINVAL;
-	}
-
-	transport = spdk_srv_tgt_get_transport(tgt, trid->trstring);
-	if (!transport)
-	{
-		SPDK_ERRLOG("Unable to find %s transport. The transport must be created first also make sure it is properly registered.\n",
-					trid->trstring);
-		return -EINVAL;
-	}
-
-	srv_listen_opts_copy(&opts_local, opts, opts->opts_size);
-	rc = spdk_srv_transport_listen(transport, trid, &opts_local);
-	if (rc < 0)
-	{
-		SPDK_ERRLOG("Unable to listen on address '%s'\n", trid->traddr);
-	}
-
-	return rc;
 }
 
 int spdk_srv_tgt_stop_listen(struct spdk_srv_tgt *tgt,
@@ -752,27 +664,6 @@ void spdk_srv_poll_group_remove(struct spdk_srv_conn *conn)
 	conn->group = NULL;
 }
 
-static int
-spdk_srv_conn_get_peer_trid(struct spdk_srv_conn *conn,
-							struct spdk_srv_transport_id *trid)
-{
-	return srv_transport_conn_get_peer_trid(conn, trid);
-}
-
-static int
-spdk_srv_conn_get_local_trid(struct spdk_srv_conn *conn,
-							 struct spdk_srv_transport_id *trid)
-{
-	return srv_transport_conn_get_local_trid(conn, trid);
-}
-
-static int
-spdk_srv_conn_get_listen_trid(struct spdk_srv_conn *conn,
-							  struct spdk_srv_transport_id *trid)
-{
-	return srv_transport_conn_get_listen_trid(conn, trid);
-}
-
 int srv_poll_group_add_transport(struct spdk_srv_poll_group *group,
 								 struct spdk_srv_transport *transport)
 {
@@ -799,38 +690,4 @@ int srv_poll_group_add_transport(struct spdk_srv_poll_group *group,
 	TAILQ_INSERT_TAIL(&group->tgroups, tgroup, link);
 
 	return 0;
-}
-
-void spdk_srv_poll_group_dump_stat(struct spdk_srv_poll_group *group, struct spdk_json_write_ctx *w)
-{
-	struct spdk_srv_transport_poll_group *tgroup;
-
-	spdk_json_write_object_begin(w);
-
-	spdk_json_write_named_string(w, "name", spdk_thread_get_name(spdk_get_thread()));
-	spdk_json_write_named_uint32(w, "conns", group->stat.conns);
-	spdk_json_write_named_uint32(w, "current_conns", group->stat.current_conns);
-	spdk_json_write_named_uint64(w, "pending_bdev_io", group->stat.pending_bdev_io);
-
-	spdk_json_write_named_array_begin(w, "transports");
-
-	TAILQ_FOREACH(tgroup, &group->tgroups, link)
-	{
-		spdk_json_write_object_begin(w);
-		/*
-		 * The trtype field intentionally contains a transport name as this is more informative.
-		 * The field has not been renamed for backward compatibility.
-		 */
-		spdk_json_write_named_string(w, "trtype", spdk_srv_get_transport_name(tgroup->transport));
-
-		if (tgroup->transport->ops->poll_group_dump_stat)
-		{
-			tgroup->transport->ops->poll_group_dump_stat(tgroup, w);
-		}
-
-		spdk_json_write_object_end(w);
-	}
-
-	spdk_json_write_array_end(w);
-	spdk_json_write_object_end(w);
 }
