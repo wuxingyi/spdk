@@ -139,8 +139,6 @@ struct spdk_client_cmd
 	struct spdk_req_sgl_descriptor sgl[CLIENT_RDMA_MAX_SGL_DESCRIPTORS];
 };
 
-struct spdk_client_rdma_hooks g_client_hooks = {};
-
 /* STAILQ wrapper for cm events. */
 struct client_rdma_cm_event_entry
 {
@@ -448,27 +446,14 @@ client_rdma_calloc(size_t nmemb, size_t size)
 		return NULL;
 	}
 
-	if (!g_client_hooks.get_rkey)
-	{
-		return calloc(nmemb, size);
-	}
-	else
-	{
-		return spdk_zmalloc(nmemb * size, 0, NULL, SPDK_ENV_SOCKET_ID_ANY, SPDK_MALLOC_DMA);
-	}
+	return calloc(nmemb, size);
 }
 
 static inline void
 client_rdma_free(void *buf)
 {
-	if (!g_client_hooks.get_rkey)
-	{
-		free(buf);
-	}
-	else
-	{
-		spdk_free(buf);
-	}
+
+	free(buf);
 }
 
 static int client_rdma_ctrlr_delete_io_qpair(struct spdk_client_ctrlr *ctrlr,
@@ -877,15 +862,8 @@ client_rdma_qpair_init(struct client_rdma_qpair *rqpair)
 	}
 
 	rctrlr = client_rdma_ctrlr(rqpair->qpair.ctrlr);
-	if (g_client_hooks.get_ibv_pd)
-	{
-		rctrlr->pd = g_client_hooks.get_ibv_pd(rqpair->qpair.trid, rqpair->cm_id->verbs);
-	}
-	else
-	{
-		rctrlr->pd = NULL;
-	}
 
+	rctrlr->pd = NULL;
 	attr.pd = rctrlr->pd;
 	attr.stats = rqpair->poller ? &rqpair->poller->stats.rdma_stats : NULL;
 	attr.send_cq = rqpair->cq;
@@ -1030,19 +1008,13 @@ client_rdma_post_recv(struct client_rdma_qpair *rqpair, uint16_t rsp_idx)
 static int
 client_rdma_reg_mr(struct rdma_cm_id *cm_id, union client_rdma_mr *mr, void *mem, size_t length)
 {
-	if (!g_client_hooks.get_rkey)
+
+	mr->mr = rdma_reg_msgs(cm_id, mem, length);
+	if (mr->mr == NULL)
 	{
-		mr->mr = rdma_reg_msgs(cm_id, mem, length);
-		if (mr->mr == NULL)
-		{
-			SPDK_ERRLOG("Unable to register mr: %s (%d)\n",
-						spdk_strerror(errno), errno);
-			return -1;
-		}
-	}
-	else
-	{
-		mr->key = g_client_hooks.get_rkey(cm_id->pd, mem, length);
+		SPDK_ERRLOG("Unable to register mr: %s (%d)\n",
+					spdk_strerror(errno), errno);
+		return -1;
 	}
 
 	return 0;
@@ -1051,38 +1023,20 @@ client_rdma_reg_mr(struct rdma_cm_id *cm_id, union client_rdma_mr *mr, void *mem
 static void
 client_rdma_dereg_mr(union client_rdma_mr *mr)
 {
-	if (!g_client_hooks.get_rkey)
+
+	if (mr->mr && rdma_dereg_mr(mr->mr))
 	{
-		if (mr->mr && rdma_dereg_mr(mr->mr))
-		{
-			SPDK_ERRLOG("Unable to de-register mr\n");
-		}
+		SPDK_ERRLOG("Unable to de-register mr\n");
 	}
-	else
-	{
-		if (mr->key)
-		{
-			g_client_hooks.put_rkey(mr->key);
-		}
-	}
+
 	memset(mr, 0, sizeof(*mr));
 }
 
 static uint32_t
 client_rdma_mr_get_lkey(union client_rdma_mr *mr)
 {
-	uint32_t lkey;
 
-	if (!g_client_hooks.get_rkey)
-	{
-		lkey = mr->mr->lkey;
-	}
-	else
-	{
-		lkey = *((uint64_t *)mr->key);
-	}
-
-	return lkey;
+	return mr->mr->lkey;
 }
 
 static void
@@ -1402,7 +1356,7 @@ client_rdma_connect_established(struct client_rdma_qpair *rqpair, int ret)
 	}
 	SPDK_DEBUGLOG(client, "RDMA responses registered\n");
 
-	rqpair->mr_map = spdk_rdma_create_mem_map(rqpair->rdma_qp->qp->pd, &g_client_hooks,
+	rqpair->mr_map = spdk_rdma_create_mem_map(rqpair->rdma_qp->qp->pd, NULL,
 											  SPDK_RDMA_MEMORY_MAP_ROLE_INITIATOR);
 	if (!rqpair->mr_map)
 	{
@@ -3472,11 +3426,6 @@ client_rdma_poll_group_free_stats(struct spdk_client_transport_poll_group *tgrou
 		free(stats->rdma.device_stats);
 	}
 	free(stats);
-}
-
-void spdk_client_rdma_init_hooks(struct spdk_client_rdma_hooks *hooks)
-{
-	g_client_hooks = *hooks;
 }
 
 const struct spdk_client_transport_ops rdma_trans_ops = {
