@@ -806,17 +806,6 @@ struct spdk_client_ctrlr
 	uint32_t io_unit_size;
 };
 
-struct spdk_client_probe_ctx
-{
-	struct spdk_client_transport_id trid;
-	void *cb_ctx;
-	spdk_client_probe_cb probe_cb;
-	spdk_client_attach_cb attach_cb;
-	spdk_client_remove_cb remove_cb;
-	TAILQ_HEAD(, spdk_client_ctrlr)
-	init_ctrlrs;
-};
-
 typedef void (*client_ctrlr_detach_cb)(struct spdk_client_ctrlr *ctrlr);
 
 enum client_ctrlr_detach_state
@@ -922,8 +911,6 @@ void client_ctrlr_destruct_async(struct spdk_client_ctrlr *ctrlr,
 int client_ctrlr_destruct_poll_async(struct spdk_client_ctrlr *ctrlr,
 									 struct client_ctrlr_detach_ctx *ctx);
 void client_ctrlr_fail(struct spdk_client_ctrlr *ctrlr, bool hot_remove);
-void client_ctrlr_connected(struct spdk_client_probe_ctx *probe_ctx,
-							struct spdk_client_ctrlr *ctrlr);
 
 void client_ctrlr_process_async_event(struct spdk_client_ctrlr *ctrlr,
 									  const struct spdk_req_cpl *cpl);
@@ -941,11 +928,6 @@ void client_qpair_abort_all_queued_reqs(struct spdk_client_qpair *qpair, uint32_
 uint32_t client_qpair_abort_queued_reqs_with_cbarg(struct spdk_client_qpair *qpair, void *cmd_cb_arg);
 void client_qpair_abort_queued_reqs(struct spdk_client_qpair *qpair, uint32_t dnr);
 void client_qpair_resubmit_requests(struct spdk_client_qpair *qpair, uint32_t num_requests);
-int client_ctrlr_identify_active_ns(struct spdk_client_ctrlr *ctrlr);
-
-int client_fabric_ctrlr_scan(struct spdk_client_probe_ctx *probe_ctx, bool direct_connect);
-int client_fabric_ctrlr_discover(struct spdk_client_ctrlr *ctrlr,
-								 struct spdk_client_probe_ctx *probe_ctx);
 int client_fabric_qpair_connect(struct spdk_client_qpair *qpair, uint32_t num_entries);
 int client_fabric_qpair_connect_async(struct spdk_client_qpair *qpair, uint32_t num_entries);
 int client_fabric_qpair_connect_poll(struct spdk_client_qpair *qpair);
