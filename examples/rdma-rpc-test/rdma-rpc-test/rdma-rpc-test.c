@@ -595,7 +595,7 @@ hello_rdma_client_init(struct hello_context_t *ctx)
 					errno, spdk_strerror(errno));
 		return -1;
 	}
-	ctx->pg.group = spdk_client_poll_group_create(&ctx->pg, NULL);
+	ctx->pg.group = spdk_client_poll_group_create(&ctx->pg);
 	if (ctx->pg.group == NULL)
 	{
 		SPDK_ERRLOG("spdk_client_poll_group_create() failed, errno %d: %s\n",

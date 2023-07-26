@@ -456,7 +456,6 @@ struct spdk_client_qpair
 struct spdk_client_poll_group
 {
 	void *ctx;
-	struct spdk_client_accel_fn_table accel_fn_table;
 	STAILQ_HEAD(, spdk_client_transport_poll_group)
 	tgroups;
 };

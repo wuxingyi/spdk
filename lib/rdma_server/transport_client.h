@@ -431,7 +431,7 @@ public:
             throw std::runtime_error{fmt::format(
               "construct client transport ctrlr failed: {}", ::spdk_strerror(errno)),};
         }
-        _pg->group = ::spdk_client_poll_group_create(_pg.get(), nullptr);
+        _pg->group = ::spdk_client_poll_group_create(_pg.get());
         SPDK_NOTICELOG(
           "Construct a new ctrlr = %p, a new poll group = %p\n",
           _pg->ctrlr, _pg->group);
