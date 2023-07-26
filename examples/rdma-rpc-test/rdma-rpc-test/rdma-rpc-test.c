@@ -247,16 +247,7 @@ struct perf_task
 	struct iovec iov;
 	struct spdk_dif_ctx dif_ctx;
 	struct rpc_request *rpc_req;
-#if HAVE_LIBAIO
-	struct iocb iocb;
-#endif
 };
-
-static void rdma_write_cb(void *ctx, const struct spdk_req_cpl *cpl)
-{
-	SPDK_DEBUGLOG(rdma, "call write cb %d %d %d %d %d %d\n", cpl->cdw0, cpl->cdw1, cpl->cid, cpl->status_raw, cpl->status.sc, cpl->status.sct);
-	return;
-}
 
 void print_performance(struct hello_context_t *ctx)
 {
@@ -264,7 +255,6 @@ void print_performance(struct hello_context_t *ctx)
 	double io_per_second, mb_per_second, average_latency, min_latency, max_latency;
 	double sum_ave_latency, min_latency_so_far, max_latency_so_far;
 	double total_io_per_second, total_mb_per_second;
-	int ns_count;
 	struct worker_thread *worker;
 	struct ns_worker_ctx *ns_ctx;
 	uint32_t max_strlen;
@@ -275,7 +265,6 @@ void print_performance(struct hello_context_t *ctx)
 	total_io_tsc = 0;
 	min_latency_so_far = (double)UINT64_MAX;
 	max_latency_so_far = 0;
-	ns_count = 0;
 
 	max_strlen = strlen("test-device");
 
@@ -312,7 +301,7 @@ void print_performance(struct hello_context_t *ctx)
 		total_io_tsc += ctx->stats.total_tsc;
 	}
 
-	if (ns_count != 0 && total_io_completed)
+	if (total_io_completed)
 	{
 		sum_ave_latency = ((double)total_io_tsc / total_io_completed) * 1000 * 1000 / g_tsc_rate;
 		printf("========================================================\n");
