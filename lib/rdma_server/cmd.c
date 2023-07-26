@@ -40,7 +40,7 @@ static inline struct client_request *_client_ns_cmd_rw(
 	struct spdk_client_qpair *qpair,
 	const struct client_payload *payload, uint32_t payload_offset, uint32_t md_offset,
 	uint64_t lba, uint32_t lba_count, spdk_req_cmd_cb cb_fn,
-	void *cb_arg, uint32_t opc, uint32_t io_flags,
+	void *cb_arg, uint32_t opc,
 	bool check_sgl, int *rc);
 
 static bool
@@ -85,13 +85,12 @@ _client_add_child_request(struct spdk_client_qpair *qpair,
 						  const struct client_payload *payload,
 						  uint32_t payload_offset, uint32_t md_offset,
 						  uint64_t lba, uint32_t lba_count, spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t opc,
-						  uint32_t io_flags,
 						  struct client_request *parent, bool check_sgl, int *rc)
 {
 	struct client_request *child;
 
 	child = _client_ns_cmd_rw(qpair, payload, payload_offset, md_offset, lba, lba_count, cb_fn,
-							  cb_arg, opc, io_flags, check_sgl, rc);
+							  cb_arg, opc, check_sgl, rc);
 	if (child == NULL)
 	{
 		client_request_free_children(parent);
@@ -110,7 +109,7 @@ _client_ns_cmd_split_request(
 	uint32_t payload_offset, uint32_t md_offset,
 	uint64_t lba, uint32_t lba_count,
 	spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t opc,
-	uint32_t io_flags, struct client_request *req,
+	struct client_request *req,
 	uint32_t sectors_per_max_io, uint32_t sector_mask,
 	int *rc)
 {
@@ -125,7 +124,7 @@ _client_ns_cmd_split_request(
 
 		child = _client_add_child_request(qpair, payload, payload_offset, md_offset,
 										  lba, lba_count, cb_fn, cb_arg, opc,
-										  io_flags, req, true, rc);
+										  req, true, rc);
 		if (child == NULL)
 		{
 			return NULL;
@@ -140,22 +139,11 @@ _client_ns_cmd_split_request(
 	return req;
 }
 
-// FIXME:
-static inline bool
-_is_io_flags_valid(uint32_t io_flags)
-{
-
-	return true;
-}
-
 static void
 _client_ns_cmd_setup_request(struct client_request *req,
-							 uint32_t opc, uint64_t lba, uint32_t lba_count,
-							 uint32_t io_flags)
+							 uint32_t opc, uint64_t lba, uint32_t lba_count)
 {
 	struct spdk_req_cmd *cmd;
-
-	assert(_is_io_flags_valid(io_flags));
 
 	cmd = &req->cmd;
 	cmd->opc = opc;
@@ -185,7 +173,7 @@ _client_ns_cmd_split_request_sgl(
 	uint32_t payload_offset, uint32_t md_offset,
 	uint64_t lba, uint32_t lba_count,
 	spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t opc,
-	uint32_t io_flags, struct client_request *req,
+	struct client_request *req,
 	int *rc)
 {
 	spdk_client_req_reset_sgl_cb reset_sgl_fn = req->payload.reset_sgl_fn;
@@ -240,7 +228,7 @@ _client_ns_cmd_split_request_sgl(
 			 */
 			child = _client_add_child_request(qpair, payload, payload_offset, md_offset,
 											  child_lba, child_lba_count,
-											  cb_fn, cb_arg, opc, io_flags,
+											  cb_fn, cb_arg, opc,
 											  req, false, rc);
 			if (child == NULL)
 			{
@@ -257,7 +245,7 @@ _client_ns_cmd_split_request_sgl(
 	if (child_length == req->payload_size)
 	{
 		/* No splitting was required, so setup the whole payload as one request. */
-		_client_ns_cmd_setup_request(req, opc, lba, lba_count, io_flags);
+		_client_ns_cmd_setup_request(req, opc, lba, lba_count);
 	}
 
 	return req;
@@ -267,7 +255,7 @@ static inline struct client_request *
 _client_ns_cmd_rw(struct spdk_client_qpair *qpair,
 				  const struct client_payload *payload, uint32_t payload_offset, uint32_t md_offset,
 				  uint64_t lba, uint32_t lba_count, spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t opc,
-				  uint32_t io_flags, bool check_sgl, int *rc)
+				  bool check_sgl, int *rc)
 {
 	struct client_request *req;
 	uint32_t sector_size = qpair->ctrlr->opts.sector_size;
@@ -303,44 +291,38 @@ _client_ns_cmd_rw(struct spdk_client_qpair *qpair,
 		return _client_ns_cmd_split_request(qpair, payload, payload_offset, md_offset, lba, lba_count,
 											cb_fn,
 											cb_arg, opc,
-											io_flags, req, sectors_per_stripe, sectors_per_stripe - 1, rc);
+											req, sectors_per_stripe, sectors_per_stripe - 1, rc);
 	}
 	else if (lba_count > sectors_per_max_io)
 	{
 		return _client_ns_cmd_split_request(qpair, payload, payload_offset, md_offset, lba, lba_count,
 											cb_fn,
 											cb_arg, opc,
-											io_flags, req, sectors_per_max_io, 0, rc);
+											req, sectors_per_max_io, 0, rc);
 	}
 	else if (client_payload_type(&req->payload) == CLIENT_PAYLOAD_TYPE_SGL && check_sgl)
 	{
 		return _client_ns_cmd_split_request_sgl(qpair, payload, payload_offset, md_offset,
-												lba, lba_count, cb_fn, cb_arg, opc, io_flags,
+												lba, lba_count, cb_fn, cb_arg, opc,
 												req, rc);
 	}
 
-	_client_ns_cmd_setup_request(req, opc, lba, lba_count, io_flags);
+	_client_ns_cmd_setup_request(req, opc, lba, lba_count);
 	return req;
 }
 
 int spdk_client_ns_cmd_read(struct spdk_client_qpair *qpair, void *buffer,
 							uint64_t lba,
-							uint32_t lba_count, spdk_req_cmd_cb cb_fn, void *cb_arg,
-							uint32_t io_flags)
+							uint32_t lba_count, spdk_req_cmd_cb cb_fn, void *cb_arg)
 {
 	struct client_request *req;
 	struct client_payload payload;
 	int rc = 0;
 
-	if (!_is_io_flags_valid(io_flags))
-	{
-		return -EINVAL;
-	}
-
 	payload = CLIENT_PAYLOAD_CONTIG(buffer, NULL);
 
 	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_READ,
-							io_flags, false, &rc);
+							false, &rc);
 	if (req != NULL)
 	{
 		return client_qpair_submit_request(qpair, req);
@@ -357,18 +339,13 @@ int spdk_client_ns_cmd_read(struct spdk_client_qpair *qpair, void *buffer,
 
 int spdk_client_ns_cmd_readv(struct spdk_client_qpair *qpair,
 							 uint64_t lba, uint32_t lba_count,
-							 spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t io_flags,
+							 spdk_req_cmd_cb cb_fn, void *cb_arg,
 							 spdk_client_req_reset_sgl_cb reset_sgl_fn,
 							 spdk_client_req_next_sge_cb next_sge_fn)
 {
 	struct client_request *req;
 	struct client_payload payload;
 	int rc = 0;
-
-	if (!_is_io_flags_valid(io_flags))
-	{
-		return -EINVAL;
-	}
 
 	if (reset_sgl_fn == NULL || next_sge_fn == NULL)
 	{
@@ -378,7 +355,7 @@ int spdk_client_ns_cmd_readv(struct spdk_client_qpair *qpair,
 	payload = CLIENT_PAYLOAD_SGL(reset_sgl_fn, next_sge_fn, cb_arg, NULL, 0, 0, 0, 0, NULL);
 
 	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_READ,
-							io_flags, true, &rc);
+							true, &rc);
 	if (req != NULL)
 	{
 		return client_qpair_submit_request(qpair, req);
@@ -395,8 +372,7 @@ int spdk_client_ns_cmd_readv(struct spdk_client_qpair *qpair,
 
 int spdk_client_ns_cmd_write(struct spdk_client_qpair *qpair,
 							 void *buffer, uint64_t lba,
-							 uint32_t lba_count, spdk_req_cmd_cb cb_fn, void *cb_arg,
-							 uint32_t io_flags)
+							 uint32_t lba_count, spdk_req_cmd_cb cb_fn, void *cb_arg)
 {
 	struct client_request *req;
 	struct client_payload payload;
@@ -405,7 +381,7 @@ int spdk_client_ns_cmd_write(struct spdk_client_qpair *qpair,
 	payload = CLIENT_PAYLOAD_CONTIG(buffer, NULL);
 
 	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_WRITE,
-							io_flags, false, &rc);
+							false, &rc);
 	if (req != NULL)
 	{
 		return client_qpair_submit_request(qpair, req);
@@ -422,7 +398,7 @@ int spdk_client_ns_cmd_write(struct spdk_client_qpair *qpair,
 
 int spdk_client_ns_cmd_writev(struct spdk_client_qpair *qpair,
 							  uint64_t lba, uint32_t lba_count,
-							  spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t io_flags,
+							  spdk_req_cmd_cb cb_fn, void *cb_arg,
 							  spdk_client_req_reset_sgl_cb reset_sgl_fn,
 							  spdk_client_req_next_sge_cb next_sge_fn)
 {
@@ -438,7 +414,7 @@ int spdk_client_ns_cmd_writev(struct spdk_client_qpair *qpair,
 	payload = CLIENT_PAYLOAD_SGL(reset_sgl_fn, next_sge_fn, cb_arg, NULL, 0, 0, 0, 0, NULL);
 
 	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_WRITE,
-							io_flags, true, &rc);
+							true, &rc);
 	if (req != NULL)
 	{
 		return client_qpair_submit_request(qpair, req);
@@ -772,7 +748,7 @@ int spdk_client_rpc_request_write(struct spdk_client_qpair *qpair,
 								  uint32_t rpc_opc,
 								  uint32_t submit_type,
 								  uint8_t *md5sum,
-								  spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t io_flags,
+								  spdk_req_cmd_cb cb_fn, void *cb_arg,
 								  spdk_client_req_reset_sgl_cb reset_sgl_fn,
 								  spdk_client_req_next_sge_cb next_sge_fn)
 {
@@ -788,7 +764,7 @@ int spdk_client_rpc_request_write(struct spdk_client_qpair *qpair,
 	payload = CLIENT_PAYLOAD_SGL(reset_sgl_fn, next_sge_fn, cb_arg, NULL, rpc_request_id, data_length, rpc_opc, submit_type, md5sum);
 	SPDK_DEBUGLOG(rdma, "spdk_client_rpc_request_write send parent request lba_start=%d, lba_end=%d\n", 0, lba_count - 1);
 	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, 0, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_RPC_WRITE,
-							io_flags, true, &rc);
+							true, &rc);
 	if (req != NULL)
 	{
 		return client_qpair_submit_request(qpair, req);
@@ -807,18 +783,13 @@ int spdk_client_rpc_request_read(struct spdk_client_qpair *qpair,
 								 uint64_t lba, uint32_t lba_count, uint32_t rpc_request_id, uint32_t data_length,
 								 uint32_t rpc_opc,
 								 uint32_t submit_type,
-								 spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t io_flags,
+								 spdk_req_cmd_cb cb_fn, void *cb_arg,
 								 spdk_client_req_reset_sgl_cb reset_sgl_fn,
 								 spdk_client_req_next_sge_cb next_sge_fn)
 {
 	struct client_request *req;
 	struct client_payload payload;
 	int rc = 0;
-
-	if (!_is_io_flags_valid(io_flags))
-	{
-		return -EINVAL;
-	}
 
 	if (reset_sgl_fn == NULL || next_sge_fn == NULL)
 	{
@@ -828,7 +799,7 @@ int spdk_client_rpc_request_read(struct spdk_client_qpair *qpair,
 	payload = CLIENT_PAYLOAD_SGL(reset_sgl_fn, next_sge_fn, cb_arg, NULL, rpc_request_id, data_length, rpc_opc, submit_type, NULL);
 
 	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_RPC_READ,
-							io_flags, true, &rc);
+							true, &rc);
 	if (req != NULL)
 	{
 		return client_qpair_submit_request(qpair, req);
@@ -908,7 +879,7 @@ void rpc_write_cb(void *ctx, const struct spdk_req_cpl *cpl)
 	}
 
 	lba_count = SPDK_CEIL_DIV(req->in_payload_length, sector_size);
-	ret = spdk_client_rpc_request_read(req->qpair, 0, lba_count, req->request_id, req->in_length, req->opc, req->submit_type, rpc_read_cb, req, 0, rpc_request_reset_in_sgl, rpc_request_next_in_sge);
+	ret = spdk_client_rpc_request_read(req->qpair, 0, lba_count, req->request_id, req->in_length, req->opc, req->submit_type, rpc_read_cb, req, rpc_request_reset_in_sgl, rpc_request_next_in_sge);
 	if (ret != 0)
 	{
 		SPDK_ERRLOG("spdk_client_rpc_request_read failed %d\n", ret);
@@ -967,7 +938,7 @@ int spdk_client_submit_rpc_request(struct spdk_client_qpair *qpair, uint32_t opc
 	{
 		md5sum = req->md5sum;
 	}
-	return spdk_client_rpc_request_write(req->qpair, 0, lba_count, req->request_id, req->out_length, req->opc, req->submit_type, md5sum, rpc_write_cb, req, 0, rpc_request_reset_out_sgl, rpc_request_next_out_sge);
+	return spdk_client_rpc_request_write(req->qpair, 0, lba_count, req->request_id, req->out_length, req->opc, req->submit_type, md5sum, rpc_write_cb, req, rpc_request_reset_out_sgl, rpc_request_next_out_sge);
 }
 
 int spdk_client_empty_free_request(struct spdk_client_qpair *qpair) {
@@ -1004,7 +975,7 @@ int spdk_client_submit_rpc_request_iovs_directly(struct spdk_client_qpair *qpair
 	uint32_t sector_size = req->qpair->ctrlr->opts.sector_size;
 	lba_count = SPDK_CEIL_DIV(req->out_payload_length, sector_size);
 
-	return spdk_client_rpc_request_write(req->qpair, 0, lba_count, req->request_id, req->out_payload_length, req->opc, req->submit_type, NULL, rpc_write_cb, req, 0, rpc_request_reset_out_sgl, rpc_request_next_out_sge);
+	return spdk_client_rpc_request_write(req->qpair, 0, lba_count, req->request_id, req->out_payload_length, req->opc, req->submit_type, NULL, rpc_write_cb, req, rpc_request_reset_out_sgl, rpc_request_next_out_sge);
 }
 
 int spdk_client_submit_rpc_request_iovs(struct spdk_client_qpair *qpair, uint32_t opc, struct iovec *raw_ioves, int raw_iov_cnt, uint32_t length,
@@ -1061,5 +1032,5 @@ int spdk_client_submit_rpc_request_iovs(struct spdk_client_qpair *qpair, uint32_
 	{
 		md5sum = req->md5sum;
 	}
-	return spdk_client_rpc_request_write(req->qpair, 0, lba_count, req->request_id, req->out_length, req->opc, req->submit_type, md5sum, rpc_write_cb, req, 0, rpc_request_reset_out_sgl, rpc_request_next_out_sge);
+	return spdk_client_rpc_request_write(req->qpair, 0, lba_count, req->request_id, req->out_length, req->opc, req->submit_type, md5sum, rpc_write_cb, req, rpc_request_reset_out_sgl, rpc_request_next_out_sge);
 }

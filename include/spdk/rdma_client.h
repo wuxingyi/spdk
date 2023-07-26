@@ -1769,8 +1769,7 @@ extern "C"
 	 * \param lba_count Length (in sectors) for the write operation.
 	 * \param cb_fn Callback function to invoke when the I/O is completed.
 	 * \param cb_arg Argument to pass to the callback function.
-	 * \param io_flags Set flags, defined by the SPDK_CLIENT_IO_FLAGS_* entries in
-	 * spdk/client_spec.h, for this I/O.
+
 	 *
 	 * \return 0 if successfully submitted, negated errnos on the following error conditions:
 	 * -EINVAL: The request is malformed.
@@ -1779,7 +1778,7 @@ extern "C"
 	 */
 	int spdk_client_ns_cmd_write(struct spdk_client_qpair *qpair, void *payload,
 								 uint64_t lba, uint32_t lba_count, spdk_req_cmd_cb cb_fn,
-								 void *cb_arg, uint32_t io_flags);
+								 void *cb_arg);
 
 	/**
 	 * Submit a write I/O to the specified Client namespace.
@@ -1794,7 +1793,6 @@ extern "C"
 	 * \param lba_count Length (in sectors) for the write operation.
 	 * \param cb_fn Callback function to invoke when the I/O is completed.
 	 * \param cb_arg Argument to pass to the callback function.
-	 * \param io_flags Set flags, defined in client_spec.h, for this I/O.
 	 * \param reset_sgl_fn Callback function to reset scattered payload.
 	 * \param next_sge_fn Callback function to iterate each scattered payload memory
 	 * segment.
@@ -1806,7 +1804,7 @@ extern "C"
 	 */
 	int spdk_client_ns_cmd_writev(struct spdk_client_qpair *qpair,
 								  uint64_t lba, uint32_t lba_count,
-								  spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t io_flags,
+								  spdk_req_cmd_cb cb_fn, void *cb_arg,
 								  spdk_client_req_reset_sgl_cb reset_sgl_fn,
 								  spdk_client_req_next_sge_cb next_sge_fn);
 
@@ -1824,7 +1822,6 @@ extern "C"
 	 * \param lba_count Length (in sectors) for the read operation.
 	 * \param cb_fn Callback function to invoke when the I/O is completed.
 	 * \param cb_arg Argument to pass to the callback function.
-	 * \param io_flags Set flags, defined in client_spec.h, for this I/O.
 	 *
 	 * \return 0 if successfully submitted, negated errnos on the following error conditions:
 	 * -EINVAL: The request is malformed.
@@ -1833,7 +1830,7 @@ extern "C"
 	 */
 	int spdk_client_ns_cmd_read(struct spdk_client_qpair *qpair, void *payload,
 								uint64_t lba, uint32_t lba_count, spdk_req_cmd_cb cb_fn,
-								void *cb_arg, uint32_t io_flags);
+								void *cb_arg);
 
 	/**
 	 * Submit a read I/O to the specified Client namespace.
@@ -1848,7 +1845,6 @@ extern "C"
 	 * \param lba_count Length (in sectors) for the read operation.
 	 * \param cb_fn Callback function to invoke when the I/O is completed.
 	 * \param cb_arg Argument to pass to the callback function.
-	 * \param io_flags Set flags, defined in client_spec.h, for this I/O.
 	 * \param reset_sgl_fn Callback function to reset scattered payload.
 	 * \param next_sge_fn Callback function to iterate each scattered payload memory
 	 * segment.
@@ -1860,7 +1856,7 @@ extern "C"
 	 */
 	int spdk_client_ns_cmd_readv(struct spdk_client_qpair *qpair,
 								 uint64_t lba, uint32_t lba_count,
-								 spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t io_flags,
+								 spdk_req_cmd_cb cb_fn, void *cb_arg,
 								 spdk_client_req_reset_sgl_cb reset_sgl_fn,
 								 spdk_client_req_next_sge_cb next_sge_fn);
 
