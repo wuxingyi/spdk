@@ -411,7 +411,7 @@ extern "C"
 		bool data_from_pool;
 		bool dif_enabled;
 		void *data;
-		struct spdk_req_cmd *cmd;
+		struct spdk_rpc_req_cmd *cmd;
 		struct spdk_req_cpl *rsp;
 		STAILQ_ENTRY(spdk_srv_request)
 		buf_link;
@@ -487,7 +487,7 @@ extern "C"
 	spdk_srv_req_get_xfer(struct spdk_srv_request *req)
 	{
 		enum spdk_srv_data_transfer xfer;
-		struct spdk_req_cmd *cmd = req->cmd;
+		struct spdk_rpc_req_cmd *cmd = req->cmd;
 		struct spdk_req_sgl_descriptor *sgl = &cmd->sgld;
 
 		xfer = spdk_srv_opc_get_data_transfer(cmd->opc);

@@ -729,6 +729,7 @@ hello_start(void *arg1)
 	int rc;
 
 	SPDK_NOTICELOG("Successfully started the application\n");
+	SPDK_NOTICELOG("size is %d", sizeof(struct spdk_rpc_req_cmd));
 	if (ctx->is_server)
 	{
 		rc = hello_rdma_init(ctx);

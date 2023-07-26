@@ -173,30 +173,21 @@ struct __attribute__((packed)) spdk_req_sgl_descriptor
 };
 SPDK_STATIC_ASSERT(sizeof(struct spdk_req_sgl_descriptor) == 16, "Incorrect size");
 
-struct spdk_req_cmd
+struct spdk_rpc_req_cmd
 {
-	/* dword 0 */
 	uint16_t opc; /* opcode */
 	uint16_t cid; /* command identifier */
-
-	/* dword 1 */
 	uint32_t rpc_opc; /* rpc opc */
-
-	/* dword 2-3 */
-	uint32_t rsvd2; /* rpc request index */
-	uint32_t rsvd3; /* rpc data length */
-
+	uint32_t request_index;	 /* rpc request index */
+	uint32_t request_length; /* rpc data length */
 	struct spdk_req_sgl_descriptor sgld;
 	uint32_t lba_start;
-
-	/* dword 12-15 */
-	uint32_t cdw12; /* command-specific */ // LBA COUNT
-	uint32_t cdw13;						   /* submit type 0 SPDK_CLIENT_SUBMIT_CONTING or 1 SPDK_CLIENT_SUBMIT_IOVES*/
-	uint32_t cdw14; /* command-specific */ // check md5sum if cdw14 == 1
+	uint32_t submit_type;							  /* submit type 0 SPDK_CLIENT_SUBMIT_CONTING or 1 SPDK_CLIENT_SUBMIT_IOVES*/
+	uint32_t enable_md5_check; /* command-specific */ // check md5sum if enable_md5_check == 1
 	uint8_t md5sum[16];
 };
-// (fixme wuxingyi)
-// SPDK_STATIC_ASSERT(sizeof(struct spdk_req_cmd) == 60, "Incorrect size");
+
+SPDK_STATIC_ASSERT(sizeof(struct spdk_rpc_req_cmd) == 60, "Incorrect size");
 
 struct spdk_req_status
 {

@@ -34,7 +34,9 @@
  */
 
 #include "spdk/rdma_client.h"
+#include "spdk/rdma_common.h"
 #include "spdk_internal/rdma_client.h"
+struct spdk_rpc_req_cmd;
 
 static inline struct client_request *_client_ns_cmd_rw(
 	struct spdk_client_qpair *qpair,
@@ -143,24 +145,22 @@ static void
 _client_ns_cmd_setup_request(struct client_request *req,
 							 uint32_t opc, uint64_t lba, uint32_t lba_count)
 {
-	struct spdk_req_cmd *cmd;
+	struct spdk_rpc_req_cmd *cmd;
 
 	cmd = &req->cmd;
 	cmd->opc = opc;
 
 	*(uint64_t *)&cmd->lba_start = lba;
 
-	cmd->cdw12 = lba_count - 1;
-
 	if (opc == SPDK_CLIENT_OPC_RPC_READ || opc == SPDK_CLIENT_OPC_RPC_WRITE)
 	{
-		cmd->rsvd2 = req->payload.rpc_request_id;
-		cmd->rsvd3 = req->payload.data_length;
-		cmd->cdw13 = req->payload.submit_type;
+		cmd->request_index = req->payload.rpc_request_id;
+		cmd->request_length = req->payload.data_length;
+		cmd->submit_type = req->payload.submit_type;
 		cmd->rpc_opc = req->payload.rpc_opc;
 		if (req->payload.md5sum != NULL)
 		{
-			cmd->cdw14 = (uint32_t)1;
+			cmd->enable_md5_check = (uint32_t)1;
 			memcpy(cmd->md5sum, req->payload.md5sum, 16);
 		}
 	}

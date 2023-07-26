@@ -135,7 +135,7 @@ struct client_rdma_wr
 
 struct spdk_client_cmd
 {
-	struct spdk_req_cmd cmd;
+	struct spdk_rpc_req_cmd cmd;
 	struct spdk_req_sgl_descriptor sgl[CLIENT_RDMA_MAX_SGL_DESCRIPTORS];
 };
 
@@ -1647,7 +1647,7 @@ client_rdma_build_null_request(struct spdk_client_rdma_req *rdma_req)
 	 * spdk_client_cmd object. For this particular command,
 	 * we only need the first 64 bytes corresponding to
 	 * the Client command. */
-	rdma_req->send_sgl[0].length = sizeof(struct spdk_req_cmd);
+	rdma_req->send_sgl[0].length = sizeof(struct spdk_rpc_req_cmd);
 
 	/* The RDMA SGL needs one element describing the Client command. */
 	rdma_req->send_wr.num_sge = 1;
@@ -1689,7 +1689,7 @@ client_rdma_build_contig_inline_request(struct client_rdma_qpair *rqpair,
 	 * spdk_client_cmd object. For this particular command,
 	 * we only need the first 64 bytes corresponding to
 	 * the Client command. */
-	rdma_req->send_sgl[0].length = sizeof(struct spdk_req_cmd);
+	rdma_req->send_sgl[0].length = sizeof(struct spdk_rpc_req_cmd);
 
 	rdma_req->send_sgl[1].addr = (uint64_t)ctx.addr;
 	rdma_req->send_sgl[1].length = (uint32_t)ctx.length;
@@ -1744,7 +1744,7 @@ client_rdma_build_contig_request(struct client_rdma_qpair *rqpair,
 	 * spdk_client_cmd object. For this particular command,
 	 * we only need the first 64 bytes corresponding to
 	 * the Client command. */
-	rdma_req->send_sgl[0].length = sizeof(struct spdk_req_cmd);
+	rdma_req->send_sgl[0].length = sizeof(struct spdk_rpc_req_cmd);
 
 	/* The RDMA SGL needs one element describing the Client command. */
 	rdma_req->send_wr.num_sge = 1;
@@ -1834,7 +1834,7 @@ client_rdma_build_sgl_request(struct client_rdma_qpair *rqpair,
 		 * spdk_client_cmd object. For this particular command,
 		 * we only need the first 64 bytes corresponding to
 		 * the Client command. */
-		rdma_req->send_sgl[0].length = sizeof(struct spdk_req_cmd);
+		rdma_req->send_sgl[0].length = sizeof(struct spdk_rpc_req_cmd);
 
 		req->cmd.sgld.keyed.type = cmd->sgl[0].keyed.type;
 		req->cmd.sgld.keyed.subtype = cmd->sgl[0].keyed.subtype;
@@ -1856,7 +1856,7 @@ client_rdma_build_sgl_request(struct client_rdma_qpair *rqpair,
 						descriptors_size, rqpair->qpair.ctrlr->ioccsz_bytes);
 			return -1;
 		}
-		rdma_req->send_sgl[0].length = sizeof(struct spdk_req_cmd) + descriptors_size;
+		rdma_req->send_sgl[0].length = sizeof(struct spdk_rpc_req_cmd) + descriptors_size;
 
 		req->cmd.sgld.unkeyed.type = SPDK_CLIENT_SGL_TYPE_LAST_SEGMENT;
 		req->cmd.sgld.unkeyed.subtype = SPDK_CLIENT_SGL_SUBTYPE_OFFSET;
@@ -1919,7 +1919,7 @@ client_rdma_build_sgl_inline_request(struct client_rdma_qpair *rqpair,
 	 * spdk_client_cmd object. For this particular command,
 	 * we only need the first 64 bytes corresponding to
 	 * the Client command. */
-	rdma_req->send_sgl[0].length = sizeof(struct spdk_req_cmd);
+	rdma_req->send_sgl[0].length = sizeof(struct spdk_rpc_req_cmd);
 
 	req->cmd.sgld.unkeyed.type = SPDK_CLIENT_SGL_TYPE_DATA_BLOCK;
 	req->cmd.sgld.unkeyed.subtype = SPDK_CLIENT_SGL_SUBTYPE_OFFSET;

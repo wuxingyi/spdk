@@ -363,10 +363,10 @@ spdk_client_ctrlr_alloc_io_qpair(struct spdk_client_ctrlr *ctrlr,
 		/* If user passes buffers, make sure they're big enough for the requested queue size */
 		if (opts.sq.vaddr)
 		{
-			if (opts.sq.buffer_size < (opts.io_queue_size * sizeof(struct spdk_req_cmd)))
+			if (opts.sq.buffer_size < (opts.io_queue_size * sizeof(struct spdk_rpc_req_cmd)))
 			{
 				CLIENT_CTRLR_ERRLOG(ctrlr, "sq buffer size %" PRIx64 " is too small for sq size %zx\n",
-									opts.sq.buffer_size, (opts.io_queue_size * sizeof(struct spdk_req_cmd)));
+									opts.sq.buffer_size, (opts.io_queue_size * sizeof(struct spdk_rpc_req_cmd)));
 				return NULL;
 			}
 		}
@@ -438,10 +438,10 @@ spdk_client_ctrlr_alloc_io_qpair_async(struct spdk_client_ctrlr *ctrlr,
 		/* If user passes buffers, make sure they're big enough for the requested queue size */
 		if (opts.sq.vaddr)
 		{
-			if (opts.sq.buffer_size < (opts.io_queue_size * sizeof(struct spdk_req_cmd)))
+			if (opts.sq.buffer_size < (opts.io_queue_size * sizeof(struct spdk_rpc_req_cmd)))
 			{
 				CLIENT_CTRLR_ERRLOG(ctrlr, "sq buffer size %" PRIx64 " is too small for sq size %zx\n",
-									opts.sq.buffer_size, (opts.io_queue_size * sizeof(struct spdk_req_cmd)));
+									opts.sq.buffer_size, (opts.io_queue_size * sizeof(struct spdk_rpc_req_cmd)));
 				return NULL;
 			}
 		}

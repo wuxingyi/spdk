@@ -1227,7 +1227,7 @@ extern "C"
 		 */
 		struct
 		{
-			struct spdk_req_cmd *vaddr;
+			struct spdk_rpc_req_cmd *vaddr;
 			uint64_t paddr;
 			uint64_t buffer_size;
 		} sq;
@@ -1415,7 +1415,7 @@ extern "C"
 
 	int spdk_client_ctrlr_io_cmd_raw_no_payload_build(struct spdk_client_ctrlr *ctrlr,
 													  struct spdk_client_qpair *qpair,
-													  struct spdk_req_cmd *cmd,
+													  struct spdk_rpc_req_cmd *cmd,
 													  spdk_req_cmd_cb cb_fn, void *cb_arg);
 
 	/**
@@ -1446,7 +1446,7 @@ extern "C"
 	 */
 	int spdk_client_ctrlr_cmd_io_raw(struct spdk_client_ctrlr *ctrlr,
 									 struct spdk_client_qpair *qpair,
-									 struct spdk_req_cmd *cmd,
+									 struct spdk_rpc_req_cmd *cmd,
 									 void *buf, uint32_t len,
 									 spdk_req_cmd_cb cb_fn, void *cb_arg);
 
@@ -1480,7 +1480,7 @@ extern "C"
 	 */
 	int spdk_client_ctrlr_cmd_io_raw_with_md(struct spdk_client_ctrlr *ctrlr,
 											 struct spdk_client_qpair *qpair,
-											 struct spdk_req_cmd *cmd,
+											 struct spdk_rpc_req_cmd *cmd,
 											 void *buf, uint32_t len, void *md_buf,
 											 spdk_req_cmd_cb cb_fn, void *cb_arg);
 
@@ -1548,7 +1548,7 @@ extern "C"
 	 * allocated for this request, -ENXIO if the admin qpair is failed at the transport layer.
 	 */
 	int spdk_client_ctrlr_cmd_admin_raw(struct spdk_client_ctrlr *ctrlr,
-										struct spdk_req_cmd *cmd,
+										struct spdk_rpc_req_cmd *cmd,
 										void *buf, uint32_t len,
 										spdk_req_cmd_cb cb_fn, void *cb_arg);
 
@@ -1879,7 +1879,7 @@ extern "C"
 	 * \param qid Queue identifier.
 	 * \param cmd Pointer to the submission queue command to be formatted.
 	 */
-	void spdk_client_print_command(uint16_t qid, struct spdk_req_cmd *cmd);
+	void spdk_client_print_command(uint16_t qid, struct spdk_rpc_req_cmd *cmd);
 
 	/**
 	 * \brief Prints (SPDK_NOTICELOG) the contents of an Client completion queue entry.

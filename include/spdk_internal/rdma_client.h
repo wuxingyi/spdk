@@ -136,8 +136,8 @@ enum spdk_client_data_transfer
 /* We want to fit submission and completion rings each in a single 2MB
  * hugepage to ensure physical address contiguity.
  */
-#define MAX_IO_QUEUE_ENTRIES (VALUE_2MB / spdk_max(                        \
-											  sizeof(struct spdk_req_cmd), \
+#define MAX_IO_QUEUE_ENTRIES (VALUE_2MB / spdk_max(                            \
+											  sizeof(struct spdk_rpc_req_cmd), \
 											  sizeof(struct spdk_req_cpl)))
 
 /* Default timeout for fabrics connect commands. */
@@ -235,7 +235,7 @@ struct client_error_cmd
 
 struct client_request
 {
-	struct spdk_req_cmd cmd;
+	struct spdk_rpc_req_cmd cmd;
 
 	uint8_t retries;
 

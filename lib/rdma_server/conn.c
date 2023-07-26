@@ -90,7 +90,7 @@ client_get_string(const struct client_string *strings, uint16_t value)
 }
 
 static void
-client_get_sgl_unkeyed(char *buf, size_t size, struct spdk_req_cmd *cmd)
+client_get_sgl_unkeyed(char *buf, size_t size, struct spdk_rpc_req_cmd *cmd)
 {
 	struct spdk_req_sgl_descriptor *sgl = &cmd->sgld;
 
@@ -98,7 +98,7 @@ client_get_sgl_unkeyed(char *buf, size_t size, struct spdk_req_cmd *cmd)
 }
 
 static void
-client_get_sgl_keyed(char *buf, size_t size, struct spdk_req_cmd *cmd)
+client_get_sgl_keyed(char *buf, size_t size, struct spdk_rpc_req_cmd *cmd)
 {
 	struct spdk_req_sgl_descriptor *sgl = &cmd->sgld;
 
@@ -106,7 +106,7 @@ client_get_sgl_keyed(char *buf, size_t size, struct spdk_req_cmd *cmd)
 }
 
 static void
-client_get_sgl(char *buf, size_t size, struct spdk_req_cmd *cmd)
+client_get_sgl(char *buf, size_t size, struct spdk_rpc_req_cmd *cmd)
 {
 	struct spdk_req_sgl_descriptor *sgl = &cmd->sgld;
 	int c;

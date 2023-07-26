@@ -228,7 +228,7 @@ struct spdk_srv_rdma_resources
 	/* Array of size "max_queue_depth" containing 64 byte capsules
 	 * used for receive.
 	 */
-	struct spdk_req_cmd *cmds;
+	struct spdk_rpc_req_cmd *cmds;
 	struct ibv_mr *cmds_mr;
 
 	/* Array of size "max_queue_depth" containing 16 byte completions
@@ -2141,11 +2141,11 @@ static void srv_rpc_write_request_exec(struct spdk_srv_rdma_request *rdma_req)
 	struct spdk_srv_rdma_conn *rconn;
 	struct spdk_srv_rpc_request *rpc_req;
 	uint8_t md5sum[SPDK_MD5DIGEST_LEN];
-	rpc_index = rdma_req->req.cmd->rsvd2;
-	data_length = rdma_req->req.cmd->rsvd3;
+	rpc_index = rdma_req->req.cmd->request_index;
+	data_length = rdma_req->req.cmd->request_length;
 	rpc_opc = rdma_req->req.cmd->rpc_opc;
-	submit_type = rdma_req->req.cmd->cdw13;
-	uint32_t check_md5 = rdma_req->req.cmd->cdw14;
+	submit_type = rdma_req->req.cmd->submit_type;
+	uint32_t check_md5 = rdma_req->req.cmd->enable_md5_check;
 	rconn = SPDK_CONTAINEROF(rdma_req->req.conn, struct spdk_srv_rdma_conn, conn);
 	rpc_req = &rconn->resources->rpc_reqs[rpc_index];
 	uint32_t io_unit_size = rconn->conn.transport->opts.io_unit_size;
@@ -2273,8 +2273,8 @@ static void srv_rpc_read_request_exec(struct spdk_srv_rdma_request *rdma_req)
 	uint32_t lba_start, subrequest_id;
 	struct spdk_srv_rdma_conn *rconn;
 	struct spdk_srv_rpc_request *rpc_req;
-	rpc_index = rdma_req->req.cmd->rsvd2;
-	data_length = rdma_req->req.cmd->rsvd3;
+	rpc_index = rdma_req->req.cmd->request_index;
+	data_length = rdma_req->req.cmd->request_length;
 	rconn = SPDK_CONTAINEROF(rdma_req->req.conn, struct spdk_srv_rdma_conn, conn);
 	rpc_req = &rconn->resources->rpc_reqs[rpc_index];
 	uint32_t io_unit_size = rconn->conn.transport->opts.io_unit_size;
@@ -2478,7 +2478,7 @@ bool srv_rdma_request_process(struct spdk_srv_rdma_transport *rtransport,
 			rdma_recv = rdma_req->recv;
 
 			/* The first element of the SGL is the Srv command */
-			rdma_req->req.cmd = (struct spdk_req_cmd *)rdma_recv->sgl[0].addr;
+			rdma_req->req.cmd = (struct spdk_rpc_req_cmd *)rdma_recv->sgl[0].addr;
 			memset(rdma_req->req.rsp, 0, sizeof(*rdma_req->req.rsp));
 
 			if (rconn->ibv_state == IBV_QPS_ERR || rconn->conn.state != SPDK_SRV_CONN_ACTIVE)
