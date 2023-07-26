@@ -241,19 +241,6 @@ client_qpair_check_enabled(struct spdk_client_qpair *qpair)
 	 */
 	if (client_qpair_get_state(qpair) == CLIENT_QPAIR_CONNECTED && !qpair->ctrlr->is_resetting)
 	{
-		client_qpair_set_state(qpair, CLIENT_QPAIR_ENABLING);
-		/*
-		 * PCIe is special, for fabrics transports, we can abort requests before disconnect during reset
-		 * but we have historically not disconnected pcie qpairs during reset so we have to abort requests
-		 * here.
-		 */
-		if (qpair->ctrlr->trtype == SPDK_CLIENT_TRANSPORT_PCIE &&
-			!qpair->is_new_qpair)
-		{
-			client_qpair_abort_all_queued_reqs(qpair, 0);
-			client_transport_qpair_abort_reqs(qpair, 0);
-		}
-
 		client_qpair_set_state(qpair, CLIENT_QPAIR_ENABLED);
 		while (!STAILQ_EMPTY(&qpair->queued_req))
 		{
@@ -276,11 +263,6 @@ client_qpair_check_enabled(struct spdk_client_qpair *qpair)
 	if (qpair->transport_failure_reason != SPDK_CLIENT_QPAIR_FAILURE_NONE &&
 		client_qpair_get_state(qpair) == CLIENT_QPAIR_ENABLED)
 	{
-		/* Don't disconnect PCIe qpairs. They are a special case for reset. */
-		if (qpair->ctrlr->trtype != SPDK_CLIENT_TRANSPORT_PCIE)
-		{
-			client_ctrlr_disconnect_qpair(qpair);
-		}
 		return false;
 	}
 
