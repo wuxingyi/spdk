@@ -610,7 +610,7 @@ extern "C"
 	/**
 	 * Get an existing transport from the target
 	 *
-	 * \param tgt The NVMe-oF target
+	 * \param tgt The target
 	 * \param transport_name The name of the transport type to get.
 	 *
 	 * \return the transport or NULL if not found
@@ -621,7 +621,7 @@ extern "C"
 	/**
 	 * Get the first transport registered with the given target
 	 *
-	 * \param tgt The NVMe-oF target
+	 * \param tgt The target
 	 *
 	 * \return The first transport registered on the target
 	 */
@@ -632,7 +632,7 @@ extern "C"
 	 *
 	 * \param transport A handle to a transport object
 	 *
-	 * \return The next transport associated with the NVMe-oF target
+	 * \return The next transport associated with the target
 	 */
 	struct spdk_srv_transport *spdk_srv_transport_get_next(struct spdk_srv_transport *transport);
 
@@ -675,7 +675,7 @@ extern "C"
 	/**
 	 * Add a transport to a target
 	 *
-	 * \param tgt The NVMe-oF target
+	 * \param tgt The target
 	 * \param transport The transport to add
 	 * \param cb_fn A callback that will be called once the transport is created
 	 * \param cb_arg A context argument passed to cb_fn.

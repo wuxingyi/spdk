@@ -317,7 +317,7 @@ void print_stats(struct hello_context_t *ctx)
 	print_performance(ctx);
 }
 
-void nvme_setup_payload(struct perf_task *task)
+void _setup_payload(struct perf_task *task)
 {
 	uint32_t max_io_size_bytes, max_io_md_size;
 	void *buf;
@@ -349,7 +349,7 @@ allocate_task(struct hello_context_t *ctx, int queue_depth)
 		exit(1);
 	}
 	task->ctx = ctx;
-	nvme_setup_payload(task);
+	_setup_payload(task);
 
 	return task;
 }
@@ -390,7 +390,7 @@ void rpc_callback(void *cb_args, int status, struct iovec *iovs, int iovcnt, int
 	else
 	{
 		spdk_mempool_put(ctx->mp, task->buf);
-		nvme_setup_payload(task);
+		_setup_payload(task);
 		submit_single_io(task);
 	}
 }

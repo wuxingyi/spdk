@@ -20,10 +20,7 @@ struct spdk_md5ctx
 };
 #define SPDK_MD5DIGEST_LEN 16
 
-/**
- * NVM command set opcodes
- */
-enum spdk_client_nvm_opcode
+enum spdk_client_opcode
 {
 	SPDK_CLIENT_OPC_FLUSH = 0x00,
 	SPDK_CLIENT_OPC_WRITE = 0x01,

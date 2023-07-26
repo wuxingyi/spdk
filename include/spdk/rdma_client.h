@@ -112,17 +112,6 @@ extern "C"
 		struct spdk_client_ctrlr *ctrlr;
 	};
 
-	enum spdk_client_cc_css
-	{
-		SPDK_CLIENT_CC_CSS_NVM = 0x0,  /**< NVM command set */
-		SPDK_CLIENT_CC_CSS_IOCS = 0x6, /**< One or more I/O command sets */
-		SPDK_CLIENT_CC_CSS_NOIO = 0x7, /**< No I/O, only admin */
-	};
-
-#define SPDK_CLIENT_CAP_CSS_NVM (1u << SPDK_CLIENT_CC_CSS_NVM)	 /**< NVM command set supported */
-#define SPDK_CLIENT_CAP_CSS_IOCS (1u << SPDK_CLIENT_CC_CSS_IOCS) /**< One or more I/O Command sets supported */
-#define SPDK_CLIENT_CAP_CSS_NOIO (1u << SPDK_CLIENT_CC_CSS_NOIO) /**< No I/O, only admin */
-
 	struct spdk_client_format
 	{
 		uint32_t lbaf : 4;
@@ -1380,111 +1369,6 @@ extern "C"
 	int spdk_client_ctrlr_free_io_qpair(struct spdk_client_qpair *qpair);
 
 	/**
-	 * Send the given NVM I/O command, I/O buffers, lists and all to the Client controller.
-	 *
-	 * This is a low level interface for submitting I/O commands directly.
-	 *
-	 * This function allows a caller to submit an I/O request that is
-	 * COMPLETELY pre-defined, right down to the "physical" memory buffers.
-	 * It is intended for testing hardware, specifying exact buffer location,
-	 * alignment, and offset.  It also allows for specific choice of PRP
-	 * and SGLs.
-	 *
-	 * The driver sets the CID.  EVERYTHING else is assumed set by the caller.
-	 * Needless to say, this is potentially extremely dangerous for both the host
-	 * (accidental/malicious storage usage/corruption), and the device.
-	 * Thus its intent is for very specific hardware testing and environment
-	 * reproduction.
-	 *
-	 * The command is submitted to a qpair allocated by spdk_client_ctrlr_alloc_io_qpair().
-	 * The user must ensure that only one thread submits I/O on a given qpair at any
-	 * given time.
-	 *
-	 * This function can only be used on PCIe controllers and qpairs.
-	 *
-	 * \param ctrlr Opaque handle to Client controller.
-	 * \param qpair I/O qpair to submit command.
-	 * \param cmd NVM I/O command to submit.
-	 * \param cb_fn Callback function invoked when the I/O command completes.
-	 * \param cb_arg Argument passed to callback function.
-	 *
-	 * \return 0 if successfully submitted, negated errnos on the following error conditions:
-	 * -ENOMEM: The request cannot be allocated.
-	 * -ENXIO: The qpair is failed at the transport level.
-	 */
-
-	int spdk_client_ctrlr_io_cmd_raw_no_payload_build(struct spdk_client_ctrlr *ctrlr,
-													  struct spdk_client_qpair *qpair,
-													  struct spdk_rpc_req_cmd *cmd,
-													  spdk_req_cmd_cb cb_fn, void *cb_arg);
-
-	/**
-	 * Send the given NVM I/O command to the Client controller.
-	 *
-	 * This is a low level interface for submitting I/O commands directly. Prefer
-	 * the spdk_client_ns_cmd_* functions instead. The validity of the command will
-	 * not be checked!
-	 *
-	 * When constructing the client_command it is not necessary to fill out the PRP
-	 * list/SGL or the CID. The driver will handle both of those for you.
-	 *
-	 * The command is submitted to a qpair allocated by spdk_client_ctrlr_alloc_io_qpair().
-	 * The user must ensure that only one thread submits I/O on a given qpair at any
-	 * given time.
-	 *
-	 * \param ctrlr Opaque handle to Client controller.
-	 * \param qpair I/O qpair to submit command.
-	 * \param cmd NVM I/O command to submit.
-	 * \param buf Virtual memory address of a single physically contiguous buffer.
-	 * \param len Size of buffer.
-	 * \param cb_fn Callback function invoked when the I/O command completes.
-	 * \param cb_arg Argument passed to callback function.
-	 *
-	 * \return 0 if successfully submitted, negated errnos on the following error conditions:
-	 * -ENOMEM: The request cannot be allocated.
-	 * -ENXIO: The qpair is failed at the transport level.
-	 */
-	int spdk_client_ctrlr_cmd_io_raw(struct spdk_client_ctrlr *ctrlr,
-									 struct spdk_client_qpair *qpair,
-									 struct spdk_rpc_req_cmd *cmd,
-									 void *buf, uint32_t len,
-									 spdk_req_cmd_cb cb_fn, void *cb_arg);
-
-	/**
-	 * Send the given NVM I/O command with metadata to the Client controller.
-	 *
-	 * This is a low level interface for submitting I/O commands directly. Prefer
-	 * the spdk_client_ns_cmd_* functions instead. The validity of the command will
-	 * not be checked!
-	 *
-	 * When constructing the client_command it is not necessary to fill out the PRP
-	 * list/SGL or the CID. The driver will handle both of those for you.
-	 *
-	 * The command is submitted to a qpair allocated by spdk_client_ctrlr_alloc_io_qpair().
-	 * The user must ensure that only one thread submits I/O on a given qpair at any
-	 * given time.
-	 *
-	 * \param ctrlr Opaque handle to Client controller.
-	 * \param qpair I/O qpair to submit command.
-	 * \param cmd NVM I/O command to submit.
-	 * \param buf Virtual memory address of a single physically contiguous buffer.
-	 * \param len Size of buffer.
-	 * \param md_buf Virtual memory address of a single physically contiguous metadata
-	 * buffer.
-	 * \param cb_fn Callback function invoked when the I/O command completes.
-	 * \param cb_arg Argument passed to callback function.
-	 *
-	 * \return 0 if successfully submitted, negated errnos on the following error conditions:
-	 * -ENOMEM: The request cannot be allocated.
-	 * -ENXIO: The qpair is failed at the transport level.
-	 */
-	int spdk_client_ctrlr_cmd_io_raw_with_md(struct spdk_client_ctrlr *ctrlr,
-											 struct spdk_client_qpair *qpair,
-											 struct spdk_rpc_req_cmd *cmd,
-											 void *buf, uint32_t len, void *md_buf,
-											 spdk_req_cmd_cb cb_fn, void *cb_arg);
-
-	/**
 	 * Process any outstanding completions for I/O submitted on a queue pair.
 	 *
 	 * This call is non-blocking, i.e. it only processes completions that are ready
@@ -1520,37 +1404,6 @@ extern "C"
 	 * \return a valid spdk_client_qp_failure_reason.
 	 */
 	spdk_client_qp_failure_reason spdk_client_qpair_get_failure_reason(struct spdk_client_qpair *qpair);
-
-	/**
-	 * Send the given admin command to the Client controller.
-	 *
-	 * This is a low level interface for submitting admin commands directly. Prefer
-	 * the spdk_client_ctrlr_cmd_* functions instead. The validity of the command will
-	 * not be checked!
-	 *
-	 * When constructing the client_command it is not necessary to fill out the PRP
-	 * list/SGL or the CID. The driver will handle both of those for you.
-	 *
-	 * This function is thread safe and can be called at any point while the controller
-	 * is attached to the SPDK Client driver.
-	 *
-	 * Call spdk_client_ctrlr_process_admin_completions() to poll for completion
-	 * of commands submitted through this function.
-	 *
-	 * \param ctrlr Opaque handle to Client controller.
-	 * \param cmd NVM admin command to submit.
-	 * \param buf Virtual memory address of a single physically contiguous buffer.
-	 * \param len Size of buffer.
-	 * \param cb_fn Callback function invoked when the admin command completes.
-	 * \param cb_arg Argument passed to callback function.
-	 *
-	 * \return 0 if successfully submitted, negated errno if resources could not be
-	 * allocated for this request, -ENXIO if the admin qpair is failed at the transport layer.
-	 */
-	int spdk_client_ctrlr_cmd_admin_raw(struct spdk_client_ctrlr *ctrlr,
-										struct spdk_rpc_req_cmd *cmd,
-										void *buf, uint32_t len,
-										spdk_req_cmd_cb cb_fn, void *cb_arg);
 
 	/**
 	 * Abort a specific previously-submitted Client command.

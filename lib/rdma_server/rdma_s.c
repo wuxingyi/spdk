@@ -3397,7 +3397,6 @@ srv_rdma_destroy_drained_conn(struct spdk_srv_rdma_conn *rconn)
 
 	srv_rdma_conn_process_pending(rtransport, rconn, true);
 
-	/* nvmr_rdma_close_conn is not called */
 	if (!rconn->to_close)
 	{
 		return;
