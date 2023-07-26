@@ -528,28 +528,6 @@ extern "C"
 	};
 
 	/**
-	 * Structure with optional IO request parameters
-	 */
-	struct spdk_client_ns_cmd_ext_io_opts
-	{
-		/** size of this structure in bytes */
-		size_t size;
-		/** Memory domain which describes data payload in IO request. The controller must support
-		 * the corresponding memory domain type, refer to \ref spdk_client_ctrlr_get_memory_domains */
-		struct spdk_memory_domain *memory_domain;
-		/** User context to be passed to memory domain operations */
-		void *memory_domain_ctx;
-		/** Flags for this IO, defined in client_spec.h */
-		uint32_t io_flags;
-		/** Virtual address pointer to the metadata payload, the length of metadata is specified by \ref spdk_client_ns_get_md_size */
-		void *metadata;
-		/** Application tag mask to use end-to-end protection information. */
-		uint16_t apptag_mask;
-		/** Application tag to use end-to-end protection information. */
-		uint16_t apptag;
-	};
-
-	/**
 	 * Signature for callback function invoked when a command is completed.
 	 *
 	 * \param ctx Callback context provided when the command was submitted.

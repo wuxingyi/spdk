@@ -618,10 +618,6 @@ _client_qpair_submit_request(struct spdk_client_qpair *qpair, struct client_requ
 
 	if (spdk_likely(rc == 0))
 	{
-		if (SPDK_DEBUGLOG_FLAG_ENABLED("client"))
-		{
-			spdk_client_print_command(qpair->id, &req->cmd);
-		}
 		req->queued = false;
 		return 0;
 	}

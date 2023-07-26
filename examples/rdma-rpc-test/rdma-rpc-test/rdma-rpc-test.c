@@ -405,7 +405,7 @@ void submit_single_io(struct perf_task *task)
 
 	if (g_submit_type == SPDK_CLIENT_SUBMIT_CONTING)
 	{
-		rc = spdk_client_submit_rpc_request(ctx->conn, TEST_RAFT_SERVICE, task->buf, g_io_size_bytes, rpc_callback, task, g_chesk_sum);
+		rc = spdk_client_submit_rpc_request(ctx->conn, TEST_DATA_SERVICE, task->buf, g_io_size_bytes, rpc_callback, task, g_chesk_sum);
 		if (rc != 0)
 		{
 			printf("spdk_client_rpc_request_submit failed\n");
@@ -414,7 +414,7 @@ void submit_single_io(struct perf_task *task)
 	}
 	else
 	{
-		rc = spdk_client_submit_rpc_request_iovs(ctx->conn, TEST_RAFT_SERVICE, &task->iov, 1, g_io_size_bytes, rpc_callback, task, g_chesk_sum);
+		rc = spdk_client_submit_rpc_request_iovs(ctx->conn, TEST_DATA_SERVICE, &task->iov, 1, g_io_size_bytes, rpc_callback, task, g_chesk_sum);
 		if (rc != 0)
 		{
 			printf("spdk_client_rpc_request_submit failed\n");
