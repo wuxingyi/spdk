@@ -138,7 +138,7 @@ enum spdk_client_data_transfer
  */
 #define MAX_IO_QUEUE_ENTRIES (VALUE_2MB / spdk_max(                            \
 											  sizeof(struct spdk_rpc_req_cmd), \
-											  sizeof(struct spdk_req_cpl)))
+											  sizeof(struct spdk_rpc_req_cpl)))
 
 /* Default timeout for fabrics connect commands. */
 #ifdef DEBUG
@@ -293,7 +293,7 @@ struct client_request
 	 * NOTE: these below two fields are only used for admin request.
 	 */
 	pid_t pid;
-	struct spdk_req_cpl cpl;
+	struct spdk_rpc_req_cpl cpl;
 
 	/**
 	 * The following members should not be reordered with members
@@ -330,7 +330,7 @@ struct client_request
 	 *  to ensure that the parent request is also completed with error
 	 *  status once all child requests are completed.
 	 */
-	struct spdk_req_cpl parent_status;
+	struct spdk_rpc_req_cpl parent_status;
 
 	/**
 	 * The user_cb_fn and user_cb_arg fields are used for holding the original
@@ -343,7 +343,7 @@ struct client_request
 
 struct client_completion_poll_status
 {
-	struct spdk_req_cpl cpl;
+	struct spdk_rpc_req_cpl cpl;
 	uint64_t timeout_tsc;
 	/**
 	 * DMA buffer retained throughout the duration of the command.  It'll be released
@@ -729,7 +729,7 @@ int client_ctrlr_destruct_poll_async(struct spdk_client_ctrlr *ctrlr,
 void client_ctrlr_fail(struct spdk_client_ctrlr *ctrlr, bool hot_remove);
 
 void client_ctrlr_process_async_event(struct spdk_client_ctrlr *ctrlr,
-									  const struct spdk_req_cpl *cpl);
+									  const struct spdk_rpc_req_cpl *cpl);
 void client_ctrlr_disconnect_qpair(struct spdk_client_qpair *qpair);
 int client_qpair_init(struct spdk_client_qpair *qpair, uint16_t id,
 					  struct spdk_client_ctrlr *ctrlr,
@@ -808,9 +808,9 @@ client_allocate_request_null(struct spdk_client_qpair *qpair, spdk_req_cmd_cb cb
 
 static inline void
 client_complete_request(spdk_req_cmd_cb cb_fn, void *cb_arg, struct spdk_client_qpair *qpair,
-						struct client_request *req, struct spdk_req_cpl *cpl)
+						struct client_request *req, struct spdk_rpc_req_cpl *cpl)
 {
-	struct spdk_req_cpl err_cpl;
+	struct spdk_rpc_req_cpl err_cpl;
 	struct client_error_cmd *cmd;
 
 	/* error injection at completion path,
@@ -902,7 +902,7 @@ client_request_remove_child(struct client_request *parent, struct client_request
 }
 
 static inline void
-client_cb_complete_child(void *child_arg, const struct spdk_req_cpl *cpl)
+client_cb_complete_child(void *child_arg, const struct spdk_rpc_req_cpl *cpl)
 {
 	struct client_request *child = child_arg;
 	struct client_request *parent = child->parent;
@@ -934,7 +934,7 @@ client_request_add_child(struct client_request *parent, struct client_request *c
 		 */
 		TAILQ_INIT(&parent->children);
 		parent->parent = NULL;
-		memset(&parent->parent_status, 0, sizeof(struct spdk_req_cpl));
+		memset(&parent->parent_status, 0, sizeof(struct spdk_rpc_req_cpl));
 	}
 
 	parent->num_children++;

@@ -372,10 +372,10 @@ spdk_client_ctrlr_alloc_io_qpair(struct spdk_client_ctrlr *ctrlr,
 		}
 		if (opts.cq.vaddr)
 		{
-			if (opts.cq.buffer_size < (opts.io_queue_size * sizeof(struct spdk_req_cpl)))
+			if (opts.cq.buffer_size < (opts.io_queue_size * sizeof(struct spdk_rpc_req_cpl)))
 			{
 				CLIENT_CTRLR_ERRLOG(ctrlr, "cq buffer size %" PRIx64 " is too small for cq size %zx\n",
-									opts.cq.buffer_size, (opts.io_queue_size * sizeof(struct spdk_req_cpl)));
+									opts.cq.buffer_size, (opts.io_queue_size * sizeof(struct spdk_rpc_req_cpl)));
 				return NULL;
 			}
 		}
@@ -447,10 +447,10 @@ spdk_client_ctrlr_alloc_io_qpair_async(struct spdk_client_ctrlr *ctrlr,
 		}
 		if (opts.cq.vaddr)
 		{
-			if (opts.cq.buffer_size < (opts.io_queue_size * sizeof(struct spdk_req_cpl)))
+			if (opts.cq.buffer_size < (opts.io_queue_size * sizeof(struct spdk_rpc_req_cpl)))
 			{
 				CLIENT_CTRLR_ERRLOG(ctrlr, "cq buffer size %" PRIx64 " is too small for cq size %zx\n",
-									opts.cq.buffer_size, (opts.io_queue_size * sizeof(struct spdk_req_cpl)));
+									opts.cq.buffer_size, (opts.io_queue_size * sizeof(struct spdk_rpc_req_cpl)));
 				return NULL;
 			}
 		}

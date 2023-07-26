@@ -681,7 +681,7 @@ static void
 _srv_request_complete(void *ctx)
 {
 	struct spdk_srv_request *req = ctx;
-	struct spdk_req_cpl *rsp = req->rsp;
+	struct spdk_rpc_req_cpl *rsp = req->rsp;
 	struct spdk_srv_conn *conn;
 	struct spdk_srv_subsystem_poll_group *sgroup = NULL;
 	bool is_aer = false;

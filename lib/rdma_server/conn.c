@@ -131,7 +131,7 @@ client_qpair_manual_complete_request(struct spdk_client_qpair *qpair,
 									 struct client_request *req, uint32_t sct, uint32_t sc,
 									 uint32_t dnr, bool print_on_error)
 {
-	struct spdk_req_cpl cpl;
+	struct spdk_rpc_req_cpl cpl;
 	bool error;
 
 	memset(&cpl, 0, sizeof(cpl));

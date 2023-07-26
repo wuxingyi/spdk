@@ -206,13 +206,13 @@ SPDK_STATIC_ASSERT(sizeof(struct spdk_req_status) == 2, "Incorrect size");
  *
  *
  */
-struct spdk_req_cpl
+struct spdk_rpc_req_cpl
 {
 	/* dword 0 */
 	uint32_t cdw0; /* command-specific used as status code ? */
 
 	/* dword 1 */
-	uint32_t cdw1; /* command-specific required data length*/
+	uint32_t length; /* command-specific required data length*/
 
 	/* dword 2 */
 	uint16_t sqhd; /* submission queue head pointer */
@@ -220,14 +220,11 @@ struct spdk_req_cpl
 
 	/* dword 3 */
 	uint16_t cid; /* command identifier */
-	union
-	{
-		uint16_t status_raw;
-		struct spdk_req_status status;
-	};
+
+	struct spdk_req_status status;
 	uint8_t md5sum[16];
 	// uint8_t			data[2048-16];
 };
-SPDK_STATIC_ASSERT(sizeof(struct spdk_req_cpl) == 32, "Incorrect size");
+SPDK_STATIC_ASSERT(sizeof(struct spdk_rpc_req_cpl) == 32, "Incorrect size");
 
 #endif

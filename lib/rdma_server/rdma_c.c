@@ -324,7 +324,7 @@ struct spdk_client_rdma_req
 
 struct spdk_client_rdma_rsp
 {
-	struct spdk_req_cpl cpl;
+	struct spdk_rpc_req_cpl cpl;
 	struct client_rdma_qpair *rqpair;
 	uint16_t idx;
 	struct client_rdma_wr rdma_wr;
@@ -503,7 +503,7 @@ client_rdma_req_put(struct client_rdma_qpair *rqpair, struct spdk_client_rdma_re
 
 static void
 client_rdma_req_complete(struct spdk_client_rdma_req *rdma_req,
-						 struct spdk_req_cpl *rsp)
+						 struct spdk_rpc_req_cpl *rsp)
 {
 	struct client_request *req = rdma_req->req;
 	struct client_rdma_qpair *rqpair;
@@ -1115,7 +1115,7 @@ client_rdma_register_rsps(struct client_rdma_qpair *rqpair)
 		rsp->rdma_wr.type = RDMA_WR_TYPE_RECV;
 		rsp->idx = i;
 		rsp_sgl->addr = (uint64_t)&rqpair->rsps[i];
-		rsp_sgl->length = sizeof(struct spdk_req_cpl);
+		rsp_sgl->length = sizeof(struct spdk_rpc_req_cpl);
 		rsp_sgl->lkey = lkey;
 
 		rqpair->rsp_recv_wrs[i].wr_id = (uint64_t)&rsp->rdma_wr;
@@ -2493,7 +2493,7 @@ static void
 client_rdma_qpair_abort_reqs(struct spdk_client_qpair *qpair, uint32_t dnr)
 {
 	struct spdk_client_rdma_req *rdma_req, *tmp;
-	struct spdk_req_cpl cpl;
+	struct spdk_rpc_req_cpl cpl;
 	struct client_rdma_qpair *rqpair = client_rdma_qpair(qpair);
 
 	//(fixme wuxingyi)
@@ -2672,7 +2672,7 @@ client_rdma_cq_process_completions(struct ibv_cq *cq, uint32_t batch_size,
 
 			SPDK_DEBUGLOG(client, "CQ recv completion\n");
 
-			if (wc[i].byte_len < sizeof(struct spdk_req_cpl))
+			if (wc[i].byte_len < sizeof(struct spdk_rpc_req_cpl))
 			{
 				SPDK_ERRLOG("recv length %u less than expected response size\n", wc[i].byte_len);
 				client_rdma_conditional_fail_qpair(rqpair, group);

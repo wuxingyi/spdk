@@ -530,7 +530,7 @@ extern "C"
 	 * \param ctx Callback context provided when the command was submitted.
 	 * \param cpl Completion queue entry that contains the completion status.
 	 */
-	typedef void (*spdk_client_cmd_cb)(void *ctx, const struct spdk_req_cpl *cpl);
+	typedef void (*spdk_client_cmd_cb)(void *ctx, const struct spdk_rpc_req_cpl *cpl);
 
 	/**
 	 * Parse the string representation of a transport ID.
@@ -1075,7 +1075,7 @@ extern "C"
 	 * \param ctx Callback context provided when the command was submitted.
 	 * \param cpl Completion queue entry that contains the completion status.
 	 */
-	typedef void (*spdk_req_cmd_cb)(void *ctx, const struct spdk_req_cpl *cpl);
+	typedef void (*spdk_req_cmd_cb)(void *ctx, const struct spdk_rpc_req_cpl *cpl);
 
 	/**
 	 * Opaque handle to a queue pair.
@@ -1233,7 +1233,7 @@ extern "C"
 		} sq;
 		struct
 		{
-			struct spdk_req_cpl *vaddr;
+			struct spdk_rpc_req_cpl *vaddr;
 			uint64_t paddr;
 			uint64_t buffer_size;
 		} cq;
@@ -1887,7 +1887,7 @@ extern "C"
 	 * \param qid Queue identifier.
 	 * \param cpl Pointer to the completion queue element to be formatted.
 	 */
-	void spdk_client_print_completion(uint16_t qid, struct spdk_req_cpl *cpl);
+	void spdk_client_print_completion(uint16_t qid, struct spdk_rpc_req_cpl *cpl);
 
 	struct ibv_context;
 	struct ibv_pd;
@@ -1942,7 +1942,7 @@ extern "C"
 	 * \param value Value of the register, undefined in case of a failure.
 	 * \param cpl Completion queue entry that contains the status of the command.
 	 */
-	typedef void (*spdk_client_reg_cb)(void *ctx, uint64_t value, const struct spdk_req_cpl *cpl);
+	typedef void (*spdk_client_reg_cb)(void *ctx, uint64_t value, const struct spdk_rpc_req_cpl *cpl);
 
 	struct client_request;
 

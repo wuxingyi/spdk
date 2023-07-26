@@ -234,7 +234,7 @@ struct spdk_srv_rdma_resources
 	/* Array of size "max_queue_depth" containing 16 byte completions
 	 * to be sent back to the user.
 	 */
-	struct spdk_req_cpl *cpls;
+	struct spdk_rpc_req_cpl *cpls;
 	struct ibv_mr *cpls_mr;
 
 	/* Array of size "max_queue_depth * InCapsuleDataSize" containing
@@ -475,7 +475,7 @@ void spdk_srv_rpc_request_handle_complete_cb(void *cb_arg, int status, char *rsp
 	int ret = 0;
 	struct spdk_srv_rdma_request *rdma_req, *temp_rdma_req;
 	struct spdk_srv_rdma_conn *rconn;
-	struct spdk_req_cpl *rsp;
+	struct spdk_rpc_req_cpl *rsp;
 	struct spdk_md5ctx md5ctx;
 
 	/* If the number of buffers is too large, then we know the I/O is larger than allowed.
@@ -522,7 +522,7 @@ void spdk_srv_rpc_request_handle_complete_cb(void *cb_arg, int status, char *rsp
 		rsp->status.p = 0;
 		rsp->cdw0 = status; // 这个其实没什么用，因为在rpc_read的时候,会把这个status再带回去
 		rsp->cid = rdma_req->req.cmd->cid;
-		rsp->cdw1 = req->out_real_length;
+		rsp->length = req->out_real_length;
 		temp_rdma_req = STAILQ_NEXT(rdma_req, state_link);
 		STAILQ_REMOVE_HEAD(&req->wait_rpc_handle_queue, state_link);
 		SPDK_DEBUGLOG(rdma, "111 rdma_req=%p stqe_next=%p temp_rdma_req=%p out_real_length=%d\n", rdma_req, rdma_req->state_link.stqe_next, temp_rdma_req, req->out_real_length);
@@ -540,7 +540,7 @@ void spdk_srv_rpc_request_handle_complete_iovs_cb(void *cb_arg, int status, stru
 	int ret = 0;
 	struct spdk_srv_rdma_request *rdma_req, *temp_rdma_req;
 	struct spdk_srv_rdma_conn *rconn;
-	struct spdk_req_cpl *rsp;
+	struct spdk_rpc_req_cpl *rsp;
 	struct spdk_md5ctx md5ctx;
 
 	/* If the number of buffers is too large, then we know the I/O is larger than allowed.
@@ -593,7 +593,7 @@ void spdk_srv_rpc_request_handle_complete_iovs_cb(void *cb_arg, int status, stru
 		rsp->status.p = 0;
 		rsp->cdw0 = status; // 这个其实没什么用，因为在rpc_read的时候,会把这个status再带回去
 		rsp->cid = rdma_req->req.cmd->cid;
-		rsp->cdw1 = req->out_real_length;
+		rsp->length = req->out_real_length;
 		temp_rdma_req = STAILQ_NEXT(rdma_req, state_link);
 		STAILQ_REMOVE_HEAD(&req->wait_rpc_handle_queue, state_link);
 		SPDK_DEBUGLOG(rdma, "111 rdma_req=%p stqe_next=%p temp_rdma_req=%p out_real_length=%d\n", rdma_req, rdma_req->state_link.stqe_next, temp_rdma_req, req->out_real_length);
@@ -1401,7 +1401,7 @@ request_transfer_out(struct spdk_srv_request *req, int *data_posted)
 	struct spdk_srv_rdma_request *rdma_req;
 	struct spdk_srv_conn *conn;
 	struct spdk_srv_rdma_conn *rconn;
-	struct spdk_req_cpl *rsp;
+	struct spdk_rpc_req_cpl *rsp;
 	struct ibv_send_wr *first = NULL;
 	struct spdk_srv_rdma_transport *rtransport;
 
@@ -1975,7 +1975,7 @@ srv_rdma_request_parse_sgl(struct spdk_srv_rdma_transport *rtransport,
 						   struct spdk_srv_rdma_request *rdma_req)
 {
 	struct spdk_srv_request *req = &rdma_req->req;
-	struct spdk_req_cpl *rsp;
+	struct spdk_rpc_req_cpl *rsp;
 	struct spdk_req_sgl_descriptor *sgl;
 	int rc;
 	uint32_t length;
@@ -2279,7 +2279,7 @@ static void srv_rpc_read_request_exec(struct spdk_srv_rdma_request *rdma_req)
 	rpc_req = &rconn->resources->rpc_reqs[rpc_index];
 	uint32_t io_unit_size = rconn->conn.transport->opts.io_unit_size;
 	uint32_t max_io_size = rconn->conn.transport->opts.max_io_size;
-	struct spdk_req_cpl *rsp;
+	struct spdk_rpc_req_cpl *rsp;
 	int out_data_offset = 0;
 	int out_remain_len = 0;
 	int copy_len = 0;
@@ -2424,7 +2424,7 @@ bool srv_rdma_request_process(struct spdk_srv_rdma_transport *rtransport,
 	struct spdk_srv_rdma_conn *rconn;
 	struct spdk_srv_rdma_device *device;
 	struct spdk_srv_rdma_poll_group *rgroup;
-	struct spdk_req_cpl *rsp = rdma_req->req.rsp;
+	struct spdk_rpc_req_cpl *rsp = rdma_req->req.rsp;
 	int rc;
 	struct spdk_srv_rdma_recv *rdma_recv;
 	enum spdk_srv_rdma_request_state prev_state;
@@ -3320,7 +3320,7 @@ srv_rdma_conn_process_pending(struct spdk_srv_rdma_transport *rtransport,
 	struct spdk_srv_request *req, *tmp;
 	struct spdk_srv_rdma_request *rdma_req, *req_tmp;
 	struct spdk_srv_rdma_resources *resources;
-	struct spdk_req_cpl *rsp;
+	struct spdk_rpc_req_cpl *rsp;
 
 	/* We process I/O in the data transfer pending queue at the highest priority. RDMA reads first */
 	STAILQ_FOREACH_SAFE(rdma_req, &rconn->pending_rdma_read_queue, state_link, req_tmp)

@@ -811,7 +811,7 @@ int spdk_client_rpc_request_read(struct spdk_client_qpair *qpair,
 	}
 }
 
-void rpc_read_cb(void *ctx, const struct spdk_req_cpl *cpl)
+void rpc_read_cb(void *ctx, const struct spdk_rpc_req_cpl *cpl)
 {
 	struct spdk_md5ctx md5ctx;
 	uint8_t md5sum[SPDK_MD5DIGEST_LEN];
@@ -848,11 +848,11 @@ void rpc_read_cb(void *ctx, const struct spdk_req_cpl *cpl)
 	return;
 }
 
-void rpc_write_cb(void *ctx, const struct spdk_req_cpl *cpl)
+void rpc_write_cb(void *ctx, const struct spdk_rpc_req_cpl *cpl)
 {
 	int ret = 0;
 	int lba_count = 0;
-	uint32_t required_data_length = cpl->cdw1;
+	uint32_t required_data_length = cpl->length;
 	int status = cpl->cdw0;
 	struct rpc_request *req = (struct rpc_request *)ctx;
 	if (required_data_length == 0)

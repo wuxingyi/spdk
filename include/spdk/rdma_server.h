@@ -412,7 +412,7 @@ extern "C"
 		bool dif_enabled;
 		void *data;
 		struct spdk_rpc_req_cmd *cmd;
-		struct spdk_req_cpl *rsp;
+		struct spdk_rpc_req_cpl *rsp;
 		STAILQ_ENTRY(spdk_srv_request)
 		buf_link;
 		uint64_t timeout_tsc;
