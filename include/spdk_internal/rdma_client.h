@@ -534,10 +534,6 @@ struct spdk_client_ctrlr_process
 	TAILQ_HEAD(, spdk_client_qpair)
 	allocated_io_qpairs;
 
-	/**
-	 * A function pointer to timeout callback function
-	 */
-	spdk_client_timeout_cb timeout_cb_fn;
 	void *timeout_cb_arg;
 	/** separate timeout values for io vs. admin reqs */
 	uint64_t timeout_io_ticks;
@@ -612,8 +608,6 @@ struct spdk_client_ctrlr
 	queued_aborts;
 	uint32_t outstanding_aborts;
 
-	/* CB to notify the user when the ctrlr is removed/failed. */
-	spdk_client_remove_cb remove_cb;
 	void *cb_ctx;
 
 	/* scratchpad pointer that can be used to send data between two CLIENT_CTRLR_STATEs */
@@ -646,17 +640,6 @@ struct client_ctrlr_detach_ctx
 	enum client_ctrlr_detach_state state;
 	TAILQ_ENTRY(client_ctrlr_detach_ctx)
 	link;
-};
-
-struct spdk_client_detach_ctx
-{
-	TAILQ_HEAD(, client_ctrlr_detach_ctx)
-	head;
-};
-
-struct spdk_client_ctrlr_reset_ctx
-{
-	struct spdk_client_ctrlr *ctrlr;
 };
 
 struct client_driver

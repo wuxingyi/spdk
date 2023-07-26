@@ -374,35 +374,3 @@ cmp_int(int a, int b)
 {
 	return a - b;
 }
-
-int spdk_client_transport_id_compare(const struct spdk_client_transport_id *trid1,
-									 const struct spdk_client_transport_id *trid2)
-{
-	int cmp;
-
-	cmp = cmp_int(trid1->trtype, trid2->trtype);
-	if (cmp)
-	{
-		return cmp;
-	}
-
-	cmp = strcasecmp(trid1->traddr, trid2->traddr);
-	if (cmp)
-	{
-		return cmp;
-	}
-
-	cmp = cmp_int(trid1->adrfam, trid2->adrfam);
-	if (cmp)
-	{
-		return cmp;
-	}
-
-	cmp = strcasecmp(trid1->trsvcid, trid2->trsvcid);
-	if (cmp)
-	{
-		return cmp;
-	}
-
-	return 0;
-}

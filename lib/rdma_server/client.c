@@ -335,10 +335,6 @@ void spdk_client_ctrlr_disconnect_io_qpair(struct spdk_client_qpair *qpair)
 	client_robust_mutex_unlock(&ctrlr->ctrlr_lock);
 }
 
-struct spdk_mempool* spdk_client_ctrlr_get_mempool(struct spdk_client_qpair *qpair) {
-    return qpair->ctrlr->rpc_data_mp;
-}
-
 struct spdk_client_qpair *
 spdk_client_ctrlr_alloc_io_qpair(struct spdk_client_ctrlr *ctrlr,
 								 const struct spdk_client_io_qpair_opts *user_opts,
@@ -996,21 +992,6 @@ spdk_client_poll_group_create(void *ctx)
 	return group;
 }
 
-struct spdk_client_poll_group *
-spdk_client_qpair_get_optimal_poll_group(struct spdk_client_qpair *qpair)
-{
-	struct spdk_client_transport_poll_group *tgroup;
-
-	tgroup = client_transport_qpair_get_optimal_poll_group(qpair->transport, qpair);
-
-	if (tgroup == NULL)
-	{
-		return NULL;
-	}
-
-	return tgroup->group;
-}
-
 int spdk_client_poll_group_add(struct spdk_client_poll_group *group, struct spdk_client_qpair *qpair)
 {
 	struct spdk_client_transport_poll_group *tgroup;
@@ -1107,12 +1088,6 @@ spdk_client_poll_group_process_completions(struct spdk_client_poll_group *group,
 	}
 
 	return error_reason ? error_reason : num_completions;
-}
-
-void *
-spdk_client_poll_group_get_ctx(struct spdk_client_poll_group *group)
-{
-	return group->ctx;
 }
 
 int spdk_client_poll_group_destroy(struct spdk_client_poll_group *group)

@@ -92,16 +92,6 @@ client_get_transport(const char *transport_name)
 	return NULL;
 }
 
-bool spdk_client_transport_available(enum spdk_client_transport_type trtype)
-{
-	return client_get_transport(spdk_client_transport_id_trtype_str(trtype)) == NULL ? false : true;
-}
-
-bool spdk_client_transport_available_by_name(const char *transport_name)
-{
-	return client_get_transport(transport_name) == NULL ? false : true;
-}
-
 void spdk_client_transport_register(const struct spdk_client_transport_ops *ops)
 {
 	struct spdk_client_transport *new_transport;

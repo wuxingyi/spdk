@@ -53,9 +53,6 @@ extern "C"
 #define SPDK_SRV_PRIORITY_MAX_LEN 4
 #define SPDK_SRV_MEMORY_POOL_ELEMENT_SIZE 4096
 
-	/**
-	 * Opaque handle to a controller. Returned by spdk_client_probe()'s attach_cb.
-	 */
 	struct spdk_client_ctrlr;
 
 	struct spdk_memory_domain;
@@ -112,23 +109,9 @@ extern "C"
 		struct spdk_client_ctrlr *ctrlr;
 	};
 
-	struct spdk_client_format
-	{
-		uint32_t lbaf : 4;
-		uint32_t ms : 1;
-		uint32_t pi : 3;
-		uint32_t pil : 1;
-		uint32_t ses : 3;
-		uint32_t reserved : 20;
-	};
-	SPDK_STATIC_ASSERT(sizeof(struct spdk_client_format) == 4, "Incorrect size");
-
 	/**
 	 * Client controller initialization options.
 	 *
-	 * A pointer to this structure will be provided for each probe callback from spdk_client_probe() to
-	 * allow the user to request non-default options, and the actual options enabled on the controller
-	 * will be provided during the attach callback.
 	 */
 	struct spdk_client_ctrlr_opts
 	{
@@ -424,17 +407,6 @@ extern "C"
 		uint64_t recv_doorbell_updates;
 	};
 
-	struct spdk_client_pcie_stat
-	{
-		uint64_t polls;
-		uint64_t idle_polls;
-		uint64_t completions;
-		uint64_t cq_doorbell_updates;
-		uint64_t submitted_requests;
-		uint64_t queued_requests;
-		uint64_t sq_doobell_updates;
-	};
-
 	struct spdk_client_tcp_stat
 	{
 		uint64_t polls;
@@ -455,7 +427,6 @@ extern "C"
 				uint32_t num_devices;
 				struct spdk_client_rdma_device_stat *device_stats;
 			} rdma;
-			struct spdk_client_pcie_stat pcie;
 			struct spdk_client_tcp_stat tcp;
 		};
 	};
@@ -465,30 +436,6 @@ extern "C"
 		uint32_t num_transports;
 		struct spdk_client_transport_poll_group_stat **transport_stat;
 	};
-
-	/*
-	 * Controller support flags
-	 *
-	 * Used for identifying if the controller supports these flags.
-	 */
-	enum spdk_client_ctrlr_flags
-	{
-		SPDK_CLIENT_CTRLR_SGL_SUPPORTED = 1 << 0,				 /**< SGL is supported */
-		SPDK_CLIENT_CTRLR_SECURITY_SEND_RECV_SUPPORTED = 1 << 1, /**< security send/receive is supported */
-		SPDK_CLIENT_CTRLR_WRR_SUPPORTED = 1 << 2,				 /**< Weighted Round Robin is supported */
-		SPDK_CLIENT_CTRLR_COMPARE_AND_WRITE_SUPPORTED = 1 << 3,	 /**< Compare and write fused operations supported */
-		SPDK_CLIENT_CTRLR_SGL_REQUIRES_DWORD_ALIGNMENT = 1 << 4, /**< Dword alignment is required for SGL */
-		SPDK_CLIENT_CTRLR_ZONE_APPEND_SUPPORTED = 1 << 5,		 /**< Zone Append is supported (within Zoned Namespaces) */
-		SPDK_CLIENT_CTRLR_DIRECTIVES_SUPPORTED = 1 << 6,		 /**< The Directives is supported */
-	};
-
-	/**
-	 * Signature for callback function invoked when a command is completed.
-	 *
-	 * \param ctx Callback context provided when the command was submitted.
-	 * \param cpl Completion queue entry that contains the completion status.
-	 */
-	typedef void (*spdk_client_cmd_cb)(void *ctx, const struct spdk_rpc_req_cpl *cpl);
 
 	/**
 	 * Parse the string representation of a transport ID.
@@ -503,7 +450,7 @@ extern "C"
 	 * ------------ | -----
 	 * trtype       | Transport type (e.g. PCIe, RDMA)
 	 * adrfam       | Address family (e.g. IPv4, IPv6)
-	 * traddr       | Transport address (e.g. 0000:04:00.0 for PCIe, 192.168.100.8 for RDMA, or WWN for FC)
+	 * traddr       | Transport address (e.g. 192.168.100.8 for RDMA)
 	 * trsvcid      | Transport service identifier (e.g. 4420)
 	 * subnqn       | Subsystem NQN
 	 *
@@ -593,385 +540,6 @@ extern "C"
 	int spdk_client_transport_id_parse_adrfam(enum spdk_srv_adrfam *adrfam, const char *str);
 
 	/**
-	 * Compare two transport IDs.
-	 *
-	 * The result of this function may be used to sort transport IDs in a consistent
-	 * order; however, the comparison result is not guaranteed to be consistent across
-	 * library versions.
-	 *
-	 * This function uses a case-insensitive comparison for string fields, but it does
-	 * not otherwise normalize the transport ID. It is the caller's responsibility to
-	 * provide the transport IDs in a consistent format.
-	 *
-	 * \param trid1 First transport ID to compare.
-	 * \param trid2 Second transport ID to compare.
-	 *
-	 * \return 0 if trid1 == trid2, less than 0 if trid1 < trid2, greater than 0 if
-	 * trid1 > trid2.
-	 */
-	int spdk_client_transport_id_compare(const struct spdk_client_transport_id *trid1,
-										 const struct spdk_client_transport_id *trid2);
-
-	/**
-	 * Determine whether the Client library can handle a specific Client over Fabrics
-	 * transport type.
-	 *
-	 * \param trtype Client over Fabrics transport type to check.
-	 *
-	 * \return true if trtype is supported or false if it is not supported or if
-	 * SPDK_CLIENT_TRANSPORT_CUSTOM is supplied as trtype since it can represent multiple
-	 * transports.
-	 */
-	bool spdk_client_transport_available(enum spdk_client_transport_type trtype);
-
-	/**
-	 * Determine whether the Client library can handle a specific Client over Fabrics
-	 * transport type.
-	 *
-	 * \param transport_name Name of the Client over Fabrics transport type to check.
-	 *
-	 * \return true if transport_name is supported or false if it is not supported.
-	 */
-	bool spdk_client_transport_available_by_name(const char *transport_name);
-
-	/**
-	 * Callback for spdk_client_probe() enumeration.
-	 *
-	 * \param cb_ctx Opaque value passed to spdk_client_probe().
-	 * \param trid Client transport identifier.
-	 * \param opts Client controller initialization options. This structure will be
-	 * populated with the default values on entry, and the user callback may update
-	 * any options to request a different value. The controller may not support all
-	 * requested parameters, so the final values will be provided during the attach
-	 * callback.
-	 *
-	 * \return true to attach to this device.
-	 */
-	typedef bool (*spdk_client_probe_cb)(void *cb_ctx, const struct spdk_client_transport_id *trid,
-										 struct spdk_client_ctrlr_opts *opts);
-
-	/**
-	 * Callback for spdk_client_attach() to report a device that has been attached to
-	 * the userspace Client driver.
-	 *
-	 * \param cb_ctx Opaque value passed to spdk_client_attach_cb().
-	 * \param trid Client transport identifier.
-	 * \param ctrlr Opaque handle to Client controller.
-	 * \param opts Client controller initialization options that were actually used.
-	 * Options may differ from the requested options from the attach call depending
-	 * on what the controller supports.
-	 */
-	typedef void (*spdk_client_attach_cb)(void *cb_ctx, const struct spdk_client_transport_id *trid,
-										  struct spdk_client_ctrlr *ctrlr,
-										  const struct spdk_client_ctrlr_opts *opts);
-
-	/**
-	 * Callback for spdk_client_remove() to report that a device attached to the userspace
-	 * Client driver has been removed from the system.
-	 *
-	 * The controller will remain in a failed state (any new I/O submitted will fail).
-	 *
-	 * The controller must be detached from the userspace driver by calling spdk_client_detach()
-	 * once the controller is no longer in use. It is up to the library user to ensure
-	 * that no other threads are using the controller before calling spdk_client_detach().
-	 *
-	 * \param cb_ctx Opaque value passed to spdk_client_remove_cb().
-	 * \param ctrlr Client controller instance that was removed.
-	 */
-	typedef void (*spdk_client_remove_cb)(void *cb_ctx, struct spdk_client_ctrlr *ctrlr);
-
-	typedef bool (*spdk_client_pcie_hotplug_filter_cb)(const struct spdk_pci_addr *addr);
-
-	/**
-	 * Enumerate the bus indicated by the transport ID and attach the userspace Client
-	 * driver to each device found if desired.
-	 *
-	 * This function is not thread safe and should only be called from one thread at
-	 * a time while no other threads are actively using any Client devices.
-	 *
-	 * If called from a secondary process, only devices that have been attached to
-	 * the userspace driver in the primary process will be probed.
-	 *
-	 * If called more than once, only devices that are not already attached to the
-	 * SPDK Client driver will be reported.
-	 *
-	 * To stop using the the controller and release its associated resources,
-	 * call spdk_client_detach() with the spdk_client_ctrlr instance from the attach_cb()
-	 * function.
-	 *
-	 * \param trid The transport ID indicating which bus to enumerate. If the trtype
-	 * is PCIe or trid is NULL, this will scan the local PCIe bus. If the trtype is
-	 * RDMA, the traddr and trsvcid must point at the location of an Client-oF discovery
-	 * service.
-	 * \param cb_ctx Opaque value which will be passed back in cb_ctx parameter of
-	 * the callbacks.
-	 * \param probe_cb will be called once per Client device found in the system.
-	 * \param attach_cb will be called for devices for which probe_cb returned true
-	 * once that Client controller has been attached to the userspace driver.
-	 * \param remove_cb will be called for devices that were attached in a previous
-	 * spdk_client_probe() call but are no longer attached to the system. Optional;
-	 * specify NULL if removal notices are not desired.
-	 *
-	 * \return 0 on success, -1 on failure.
-	 */
-	int spdk_client_probe(const struct spdk_client_transport_id *trid,
-						  void *cb_ctx,
-						  spdk_client_probe_cb probe_cb,
-						  spdk_client_attach_cb attach_cb,
-						  spdk_client_remove_cb remove_cb);
-
-	/**
-	 * Connect the Client driver to the device located at the given transport ID.
-	 *
-	 * This function is not thread safe and should only be called from one thread at
-	 * a time while no other threads are actively using this Client device.
-	 *
-	 * If called from a secondary process, only the device that has been attached to
-	 * the userspace driver in the primary process will be connected.
-	 *
-	 * If connecting to multiple controllers, it is suggested to use spdk_client_probe()
-	 * and filter the requested controllers with the probe callback. For PCIe controllers,
-	 * spdk_client_probe() will be more efficient since the controller resets will happen
-	 * in parallel.
-	 *
-	 * To stop using the the controller and release its associated resources, call
-	 * spdk_client_detach() with the spdk_client_ctrlr instance returned by this function.
-	 *
-	 * \param trid The transport ID indicating which device to connect. If the trtype
-	 * is PCIe, this will connect the local PCIe bus. If the trtype is RDMA, the traddr
-	 * and trsvcid must point at the location of an Client-oF service.
-	 * \param opts Client controller initialization options. Default values will be used
-	 * if the user does not specify the options. The controller may not support all
-	 * requested parameters.
-	 * \param opts_size Must be set to sizeof(struct spdk_client_ctrlr_opts), or 0 if
-	 * opts is NULL.
-	 *
-	 * \return pointer to the connected Client controller or NULL if there is any failure.
-	 *
-	 */
-	struct spdk_client_ctrlr *spdk_client_connect(const struct spdk_client_transport_id *trid,
-												  const struct spdk_client_ctrlr_opts *opts,
-												  size_t opts_size);
-
-	struct spdk_client_probe_ctx;
-
-	/**
-	 * Connect the Client driver to the device located at the given transport ID.
-	 *
-	 * The function will return a probe context on success, controller associates with
-	 * the context is not ready for use, user must call spdk_client_probe_poll_async()
-	 * until spdk_client_probe_poll_async() returns 0.
-	 *
-	 * \param trid The transport ID indicating which device to connect. If the trtype
-	 * is PCIe, this will connect the local PCIe bus. If the trtype is RDMA, the traddr
-	 * and trsvcid must point at the location of an Client-oF service.
-	 * \param opts Client controller initialization options. Default values will be used
-	 * if the user does not specify the options. The controller may not support all
-	 * requested parameters.
-	 * \param attach_cb will be called once the Client controller has been attached
-	 * to the userspace driver.
-	 *
-	 * \return probe context on success, NULL on failure.
-	 *
-	 */
-	struct spdk_client_probe_ctx *spdk_client_connect_async(const struct spdk_client_transport_id *trid,
-															const struct spdk_client_ctrlr_opts *opts,
-															spdk_client_attach_cb attach_cb);
-
-	/**
-	 * Probe and add controllers to the probe context list.
-	 *
-	 * Users must call spdk_client_probe_poll_async() to initialize
-	 * controllers in the probe context list to the READY state.
-	 *
-	 * \param trid The transport ID indicating which bus to enumerate. If the trtype
-	 * is PCIe or trid is NULL, this will scan the local PCIe bus. If the trtype is
-	 * RDMA, the traddr and trsvcid must point at the location of an Client-oF discovery
-	 * service.
-	 * \param cb_ctx Opaque value which will be passed back in cb_ctx parameter of
-	 * the callbacks.
-	 * \param probe_cb will be called once per Client device found in the system.
-	 * \param attach_cb will be called for devices for which probe_cb returned true
-	 * once that Client controller has been attached to the userspace driver.
-	 * \param remove_cb will be called for devices that were attached in a previous
-	 * spdk_client_probe() call but are no longer attached to the system. Optional;
-	 * specify NULL if removal notices are not desired.
-	 *
-	 * \return probe context on success, NULL on failure.
-	 */
-	struct spdk_client_probe_ctx *spdk_client_probe_async(const struct spdk_client_transport_id *trid,
-														  void *cb_ctx,
-														  spdk_client_probe_cb probe_cb,
-														  spdk_client_attach_cb attach_cb,
-														  spdk_client_remove_cb remove_cb);
-
-	/**
-	 * Proceed with attaching controllers associated with the probe context.
-	 *
-	 * The probe context is one returned from a previous call to
-	 * spdk_client_probe_async().  Users must call this function on the
-	 * probe context until it returns 0.
-	 *
-	 * If any controllers fail to attach, there is no explicit notification.
-	 * Users can detect attachment failure by comparing attach_cb invocations
-	 * with the number of times where the user returned true for the
-	 * probe_cb.
-	 *
-	 * \param probe_ctx Context used to track probe actions.
-	 *
-	 * \return 0 if all probe operations are complete; the probe_ctx
-	 * is also freed and no longer valid.
-	 * \return -EAGAIN if there are still pending probe operations; user must call
-	 * spdk_client_probe_poll_async again to continue progress.
-	 */
-	int spdk_client_probe_poll_async(struct spdk_client_probe_ctx *probe_ctx);
-
-	/**
-	 * Detach specified device returned by spdk_client_probe()'s attach_cb from the
-	 * Client driver.
-	 *
-	 * On success, the spdk_client_ctrlr handle is no longer valid.
-	 *
-	 * This function should be called from a single thread while no other threads
-	 * are actively using the Client device.
-	 *
-	 * \param ctrlr Opaque handle to Client controller.
-	 *
-	 * \return 0 on success, -1 on failure.
-	 */
-	int spdk_client_detach(struct spdk_client_ctrlr *ctrlr);
-
-	struct spdk_client_detach_ctx;
-
-	/**
-	 * Allocate a context to track detachment of multiple controllers if this call is the
-	 * first successful start of detachment in a sequence, or use the passed context otherwise.
-	 *
-	 * Then, start detaching the specified device returned by spdk_client_probe()'s attach_cb
-	 * from the Client driver, and append this detachment to the context.
-	 *
-	 * User must call spdk_client_detach_poll_async() to complete the detachment.
-	 *
-	 * If the context is not allocated before this call, and if the specified device is detached
-	 * locally from the caller process but any other process still attaches it or failed to be
-	 * detached, context is not allocated.
-	 *
-	 * This function should be called from a single thread while no other threads are
-	 * actively using the Client device.
-	 *
-	 * \param ctrlr Opaque handle to HVMe controller.
-	 * \param detach_ctx Reference to the context in a sequence. An new context is allocated
-	 * if this call is the first successful start of detachment in a sequence, or use the
-	 * passed context.
-	 */
-	int spdk_client_detach_async(struct spdk_client_ctrlr *ctrlr,
-								 struct spdk_client_detach_ctx **detach_ctx);
-
-	/**
-	 * Poll detachment of multiple controllers until they complete.
-	 *
-	 * User must call this function until it returns 0.
-	 *
-	 * \param detach_ctx Context to track the detachment.
-	 *
-	 * \return 0 if all detachments complete; the context is also freed and no longer valid.
-	 * \return -EAGAIN if any detachment is still in progress; users must call
-	 * spdk_client_detach_poll_async() again to continue progress.
-	 */
-	int spdk_client_detach_poll_async(struct spdk_client_detach_ctx *detach_ctx);
-
-	/**
-	 * Continue calling spdk_client_detach_poll_async() internally until it returns 0.
-	 *
-	 * \param detach_ctx Context to track the detachment.
-	 */
-	void spdk_client_detach_poll(struct spdk_client_detach_ctx *detach_ctx);
-
-	/**
-	 * Set the remove callback and context to be invoked if the controller is removed.
-	 *
-	 * This will override any remove_cb and/or ctx specified when the controller was
-	 * probed.
-	 *
-	 * This function may only be called from the primary process.  This function has
-	 * no effect if called from a secondary process.
-	 *
-	 * \param ctrlr Opaque handle to an Client controller.
-	 * \param remove_cb remove callback
-	 * \param remove_ctx remove callback context
-	 */
-	void spdk_client_ctrlr_set_remove_cb(struct spdk_client_ctrlr *ctrlr,
-										 spdk_client_remove_cb remove_cb, void *remove_ctx);
-
-	/**
-	 * Perform a full hardware reset of the Client controller.
-	 *
-	 * This function should be called from a single thread while no other threads
-	 * are actively using the Client device.
-	 *
-	 * Any pointers returned from spdk_client_ctrlr_get_ns(), spdk_client_ns_get_data(),
-	 * spdk_client_zns_ns_get_data(), and spdk_client_zns_ctrlr_get_data()
-	 * may be invalidated by calling this function. The number of namespaces as returned
-	 * by spdk_client_ctrlr_get_num_ns() may also change.
-	 *
-	 * \param ctrlr Opaque handle to Client controller.
-	 *
-	 * \return 0 on success, -1 on failure.
-	 */
-	int spdk_client_ctrlr_reset(struct spdk_client_ctrlr *ctrlr);
-
-	/**
-	 * Inform the driver that the application is preparing to reset the specified Client controller.
-	 *
-	 * This function allows the driver to make decisions knowing that a reset is about to happen.
-	 * For example, the pcie transport in this case could skip sending DELETE_CQ and DELETE_SQ
-	 * commands to the controller if an io qpair is freed after this function is called.
-	 *
-	 * \param ctrlr Opaque handle to Client controller.
-	 */
-	void spdk_client_ctrlr_prepare_for_reset(struct spdk_client_ctrlr *ctrlr);
-
-	struct spdk_client_ctrlr_reset_ctx;
-
-	/**
-	 * Create a context object that can be polled to perform a full hardware reset of the Client controller.
-	 * (Deprecated, please use spdk_client_ctrlr_disconnect(), spdk_client_ctrlr_reconnect_async(), and
-	 * spdk_client_ctrlr_reconnect_poll_async() instead.)
-	 *
-	 * The function will set the controller reset context on success, user must call
-	 * spdk_client_ctrlr_reset_poll_async() until it returns a value other than -EAGAIN.
-	 *
-	 * \param ctrlr Opaque handle to Client controller.
-	 * \param reset_ctx Double pointer to reset context.
-	 *
-	 * \return 0 on success.
-	 * \return -ENOMEM if context could not be allocated.
-	 * \return -EBUSY if controller is already resetting.
-	 * \return -ENXIO if controller has been removed.
-	 *
-	 */
-	int spdk_client_ctrlr_reset_async(struct spdk_client_ctrlr *ctrlr,
-									  struct spdk_client_ctrlr_reset_ctx **reset_ctx);
-
-	/**
-	 * Proceed with resetting controller associated with the controller reset context.
-	 * (Deprecated, please use spdk_client_ctrlr_disconnect(), spdk_client_ctrlr_reconnect_async(), and
-	 * spdk_client_ctrlr_reconnect_poll_async() instead.)
-	 *
-	 * The controller reset context is one returned from a previous call to
-	 * spdk_client_ctrlr_reset_async().  Users must call this function on the
-	 * controller reset context until it returns a value other than -EAGAIN.
-	 *
-	 * \param ctrlr_reset_ctx Context used to track controller reset actions.
-	 *
-	 * \return 0 if all controller reset operations are complete; the ctrlr_reset_ctx
-	 * is also freed and no longer valid.
-	 * \return -EAGAIN if there are still pending controller reset operations; user must call
-	 * spdk_client_ctrlr_reset_poll_async again to continue progress.
-	 */
-	int spdk_client_ctrlr_reset_poll_async(struct spdk_client_ctrlr_reset_ctx *ctrlr_reset_ctx);
-
-	/**
 	 * Disconnect the given Client controller.
 	 *
 	 * This function is used as the first operation of a full reset sequence of the given Client
@@ -1042,61 +610,6 @@ extern "C"
 	 */
 	typedef void (*spdk_connected_cb)(void *cb_args, int status);
 	struct spdk_client_qpair;
-
-	/**
-	 * Signature for the callback function invoked when a timeout is detected on a
-	 * request.
-	 *
-	 * For timeouts detected on the admin queue pair, the qpair returned here will
-	 * be NULL.  If the controller has a serious error condition and is unable to
-	 * communicate with driver via completion queue, the controller can set Controller
-	 * Fatal Status field to 1, then reset is required to recover from such error.
-	 * Users may detect Controller Fatal Status when timeout happens.
-	 *
-	 * \param cb_arg Argument passed to callback function.
-	 * \param ctrlr Opaque handle to Client controller.
-	 * \param qpair Opaque handle to a queue pair.
-	 * \param cid Command ID.
-	 */
-	typedef void (*spdk_client_timeout_cb)(void *cb_arg,
-										   struct spdk_client_ctrlr *ctrlr,
-										   struct spdk_client_qpair *qpair,
-										   uint16_t cid);
-
-	/**
-	 * Register for timeout callback on a controller.
-	 *
-	 * The application can choose to register for timeout callback or not register
-	 * for timeout callback.
-	 *
-	 * \param ctrlr Client controller on which to monitor for timeout.
-	 * \param timeout_io_us Timeout value in microseconds for io commands.
-	 * \param timeout_admin_us Timeout value in microseconds for admin commands.
-	 * \param cb_fn A function pointer that points to the callback function.
-	 * \param cb_arg Argument to the callback function.
-	 */
-	void spdk_client_ctrlr_register_timeout_callback(struct spdk_client_ctrlr *ctrlr,
-													 uint64_t timeout_io_us, uint64_t timeout_admin_us,
-													 spdk_client_timeout_cb cb_fn, void *cb_arg);
-
-	/**
-	 * Get a full discovery log page from the specified controller.
-	 *
-	 * This function will first read the discovery log header to determine the
-	 * total number of valid entries in the discovery log, then it will allocate
-	 * a buffer to hold the entire log and issue multiple GET_LOG_PAGE commands to
-	 * get all of the entries.
-	 *
-	 * The application is responsible for calling
-	 * \ref spdk_client_ctrlr_process_admin_completions to trigger processing of
-	 * completions submitted by this function.
-	 *
-	 * \param ctrlr Pointer to the discovery controller.
-	 * \param cb_fn Function to call when the operation is complete.
-	 * \param cb_arg Argument to pass to cb_fn.
-	 */
-	// int spdk_client_ctrlr_get_discovery_log_page(struct spdk_client_ctrlr *ctrlr,
-	// 		spdk_client_discovery_cb cb_fn, void *cb_arg);
 
 	/**
 	 * Submission queue priority values for Create I/O Submission Queue Command.
@@ -1286,8 +799,6 @@ extern "C"
 	 */
 	void spdk_client_ctrlr_disconnect_io_qpair(struct spdk_client_qpair *qpair);
 
-    struct spdk_mempool* spdk_client_ctrlr_get_mempool(struct spdk_client_qpair *qpair);
-
 	/**
 	 * Attempt to reconnect the given qpair.
 	 *
@@ -1315,16 +826,6 @@ extern "C"
 	 * the application should call spdk_client_ctrlr_reset to reset the entire controller.
 	 */
 	int spdk_client_ctrlr_reconnect_io_qpair(struct spdk_client_qpair *qpair);
-
-	/**
-	 * Returns the reason the admin qpair for a given controller is disconnected.
-	 *
-	 * \param ctrlr The controller to check.
-	 *
-	 * \return a valid spdk_client_qp_failure_reason.
-	 */
-	spdk_client_qp_failure_reason spdk_client_ctrlr_get_admin_qp_failure_reason(
-		struct spdk_client_ctrlr *ctrlr);
 
 	/**
 	 * Free an I/O queue pair that was allocated by spdk_client_ctrlr_alloc_io_qpair().
@@ -1375,46 +876,6 @@ extern "C"
 	spdk_client_qp_failure_reason spdk_client_qpair_get_failure_reason(struct spdk_client_qpair *qpair);
 
 	/**
-	 * Abort a specific previously-submitted Client command.
-	 *
-	 * \sa spdk_client_ctrlr_register_timeout_callback()
-	 *
-	 * \param ctrlr Client controller to which the command was submitted.
-	 * \param qpair Client queue pair to which the command was submitted. For admin
-	 *  commands, pass NULL for the qpair.
-	 * \param cid Command ID of the command to abort.
-	 * \param cb_fn Callback function to invoke when the abort has completed.
-	 * \param cb_arg Argument to pass to the callback function.
-	 *
-	 * \return 0 if successfully submitted, negated errno if resources could not be
-	 * allocated for this request, -ENXIO if the admin qpair is failed at the transport layer.
-	 */
-	int spdk_client_ctrlr_cmd_abort(struct spdk_client_ctrlr *ctrlr,
-									struct spdk_client_qpair *qpair,
-									uint16_t cid,
-									spdk_req_cmd_cb cb_fn,
-									void *cb_arg);
-
-	/**
-	 * Abort previously submitted commands which have cmd_cb_arg as its callback argument.
-	 *
-	 * \param ctrlr Client controller to which the commands were submitted.
-	 * \param qpair Client queue pair to which the commands were submitted. For admin
-	 * commands, pass NULL for the qpair.
-	 * \param cmd_cb_arg Callback argument for the Client commands which this function
-	 * attempts to abort.
-	 * \param cb_fn Callback function to invoke when this function has completed.
-	 * \param cb_arg Argument to pass to the callback function.
-	 *
-	 * \return 0 if successfully submitted, negated errno otherwise.
-	 */
-	int spdk_client_ctrlr_cmd_abort_ext(struct spdk_client_ctrlr *ctrlr,
-										struct spdk_client_qpair *qpair,
-										void *cmd_cb_arg,
-										spdk_req_cmd_cb cb_fn,
-										void *cb_arg);
-
-	/**
 	 * \brief Alloc Client I/O queue identifier.
 	 *
 	 * This function is only needed for the non-standard case of allocating queues using the raw
@@ -1458,15 +919,6 @@ extern "C"
 	 * \return Pointer to the new poll group, or NULL on error.
 	 */
 	struct spdk_client_poll_group *spdk_client_poll_group_create(void *ctx);
-
-	/**
-	 * Get a optimal poll group.
-	 *
-	 * \param qpair The qpair to get the optimal poll group.
-	 *
-	 * \return Pointer to the optimal poll group, or NULL if not found.
-	 */
-	struct spdk_client_poll_group *spdk_client_qpair_get_optimal_poll_group(struct spdk_client_qpair *qpair);
 
 	/**
 	 * Add an spdk_client_qpair to a poll group. qpairs may only be added to
@@ -1520,15 +972,6 @@ extern "C"
 													   uint32_t completions_per_qpair, spdk_client_disconnected_qpair_cb disconnected_qpair_cb);
 
 	/**
-	 * Retrieve the user context for this specific poll group.
-	 *
-	 * \param group The poll group from which to retrieve the context.
-	 *
-	 * \return A pointer to the user provided poll group context.
-	 */
-	void *spdk_client_poll_group_get_ctx(struct spdk_client_poll_group *group);
-
-	/**
 	 * Retrieves transport statistics for the given poll group.
 	 *
 	 * Note: the structure returned by this function should later be freed with
@@ -1578,7 +1021,6 @@ extern "C"
 	 * The user must ensure that only one thread submits I/O on a given qpair at any
 	 * given time.
 	 *
-	 * \param ns Client namespace to submit the write I/O.
 	 * \param qpair I/O queue pair to submit the request.
 	 * \param payload Virtual address pointer to the data payload.
 	 * \param lba Starting LBA to write the data.
@@ -1603,7 +1045,6 @@ extern "C"
 	 * The user must ensure that only one thread submits I/O on a given qpair at any
 	 * given time.
 	 *
-	 * \param ns Client namespace to submit the write I/O.
 	 * \param qpair I/O queue pair to submit the request.
 	 * \param lba Starting LBA to write the data.
 	 * \param lba_count Length (in sectors) for the write operation.
@@ -1631,7 +1072,6 @@ extern "C"
 	 * The user must ensure that only one thread submits I/O on a given qpair at any
 	 * given time.
 	 *
-	 * \param ns Client namespace to submit the read I/O.
 	 * \param qpair I/O queue pair to submit the request.
 	 * \param payload Virtual address pointer to the data payload.
 	 * \param lba Starting LBA to read the data.
@@ -1655,7 +1095,6 @@ extern "C"
 	 * The user must ensure that only one thread submits I/O on a given qpair at any
 	 * given time.
 	 *
-	 * \param ns Client namespace to submit the read I/O.
 	 * \param qpair I/O queue pair to submit the request.
 	 * \param lba Starting LBA to read the data.
 	 * \param lba_count Length (in sectors) for the read operation.
@@ -1677,14 +1116,6 @@ extern "C"
 								 spdk_client_req_next_sge_cb next_sge_fn);
 
 	/**
-	 * \brief Given Client status, return ASCII string for that error.
-	 *
-	 * \param status Status from Client completion queue element.
-	 * \return Returns status as an ASCII string.
-	 */
-	const char *spdk_req_cpl_get_status_string(const struct spdk_req_status *status);
-
-	/**
 	 * \brief Gets the Client qpair ID for the specified qpair.
 	 *
 	 * \param qpair Pointer to the Client queue pair.
@@ -1692,66 +1123,14 @@ extern "C"
 	 */
 	uint16_t spdk_client_qpair_get_id(struct spdk_client_qpair *qpair);
 
-	/**
-	 * \brief Prints (SPDK_NOTICELOG) the contents of an Client submission queue entry (command).
-	 *
-	 * \param qid Queue identifier.
-	 * \param cmd Pointer to the submission queue command to be formatted.
-	 */
-	void spdk_client_print_command(uint16_t qid, struct spdk_rpc_req_cmd *cmd);
-
-	/**
-	 * \brief Prints (SPDK_NOTICELOG) the contents of an Client completion queue entry.
-	 *
-	 * \param qid Queue identifier.
-	 * \param cpl Pointer to the completion queue element to be formatted.
-	 */
-	void spdk_client_print_completion(uint16_t qid, struct spdk_rpc_req_cpl *cpl);
-
 	struct ibv_context;
 	struct ibv_pd;
 	struct ibv_mr;
 
 	/**
-	 * RDMA Transport Hooks
-	 */
-	struct spdk_client_rdma_hooks
-	{
-		/**
-		 * \brief Get an InfiniBand Verbs protection domain.
-		 *
-		 * \param trid the transport id
-		 * \param verbs Infiniband verbs context
-		 *
-		 * \return pd of the client ctrlr
-		 */
-		struct ibv_pd *(*get_ibv_pd)(const struct spdk_client_transport_id *trid,
-									 struct ibv_context *verbs);
 
-		/**
-		 * \brief Get an InfiniBand Verbs memory region for a buffer.
-		 *
-		 * \param pd The protection domain returned from get_ibv_pd
-		 * \param buf Memory buffer for which an rkey should be returned.
-		 * \param size size of buf
-		 *
-		 * \return Infiniband remote key (rkey) for this buf
-		 */
-		uint64_t (*get_rkey)(struct ibv_pd *pd, void *buf, size_t size);
-
-		/**
-		 * \brief Put back keys got from get_rkey.
-		 *
-		 * \param key The Infiniband remote key (rkey) got from get_rkey
-		 *
-		 */
-		void (*put_rkey)(uint64_t key);
-	};
-
-	/**
-
-	 * Opaque handle for a transport poll group. Used by the transport function table.
-	 */
+ * Opaque handle for a transport poll group. Used by the transport function table.
+ */
 	struct spdk_client_transport_poll_group;
 
 	/**
