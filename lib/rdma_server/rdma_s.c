@@ -1736,7 +1736,6 @@ srv_rdma_fill_wr_sgl(struct spdk_srv_rdma_poll_group *rgroup,
 					 uint32_t num_extra_wrs)
 {
 	struct spdk_rdma_memory_translation mem_translation;
-	struct spdk_dif_ctx *dif_ctx = NULL;
 	struct ibv_sge *sg_ele;
 	struct iovec *iov;
 	uint32_t remaining_data_block = 0;
@@ -1758,77 +1757,19 @@ srv_rdma_fill_wr_sgl(struct spdk_srv_rdma_poll_group *rgroup,
 		sg_ele = &wr->sg_list[wr->num_sge];
 		remaining = spdk_min((uint32_t)iov->iov_len - rdma_req->offset, total_length);
 
-		if (spdk_likely(!dif_ctx))
+		sg_ele->lkey = lkey;
+		sg_ele->addr = (uintptr_t)iov->iov_base + rdma_req->offset;
+		sg_ele->length = remaining;
+		SPDK_DEBUGLOG(rdma, "sge[%d] %p addr 0x%" PRIx64 ", len %u\n", wr->num_sge, sg_ele, sg_ele->addr,
+					  sg_ele->length);
+		rdma_req->offset += sg_ele->length;
+		total_length -= sg_ele->length;
+		wr->num_sge++;
+
+		if (rdma_req->offset == iov->iov_len)
 		{
-			sg_ele->lkey = lkey;
-			sg_ele->addr = (uintptr_t)iov->iov_base + rdma_req->offset;
-			sg_ele->length = remaining;
-			SPDK_DEBUGLOG(rdma, "sge[%d] %p addr 0x%" PRIx64 ", len %u\n", wr->num_sge, sg_ele, sg_ele->addr,
-						  sg_ele->length);
-			rdma_req->offset += sg_ele->length;
-			total_length -= sg_ele->length;
-			wr->num_sge++;
-
-			if (rdma_req->offset == iov->iov_len)
-			{
-				rdma_req->offset = 0;
-				rdma_req->iovpos++;
-			}
-		}
-		else
-		{
-			uint32_t data_block_size = dif_ctx->block_size - dif_ctx->md_size;
-			uint32_t md_size = dif_ctx->md_size;
-			uint32_t sge_len;
-
-			while (remaining)
-			{
-				if (wr->num_sge >= SPDK_SRV_MAX_SGL_ENTRIES)
-				{
-					if (num_extra_wrs > 0 && wr->next)
-					{
-						wr = wr->next;
-						wr->num_sge = 0;
-						sg_ele = &wr->sg_list[wr->num_sge];
-						num_extra_wrs--;
-					}
-					else
-					{
-						break;
-					}
-				}
-				sg_ele->lkey = lkey;
-				sg_ele->addr = (uintptr_t)((char *)iov->iov_base + rdma_req->offset);
-				sge_len = spdk_min(remaining, remaining_data_block);
-				sg_ele->length = sge_len;
-				SPDK_DEBUGLOG(rdma, "sge[%d] %p addr 0x%" PRIx64 ", len %u\n", wr->num_sge, sg_ele, sg_ele->addr,
-							  sg_ele->length);
-				remaining -= sge_len;
-				remaining_data_block -= sge_len;
-				rdma_req->offset += sge_len;
-				total_length -= sge_len;
-
-				sg_ele++;
-				wr->num_sge++;
-
-				if (remaining_data_block == 0)
-				{
-					/* skip metadata */
-					rdma_req->offset += md_size;
-					total_length -= md_size;
-					/* Metadata that do not fit this IO buffer will be included in the next IO buffer */
-					remaining -= spdk_min(remaining, md_size);
-					remaining_data_block = data_block_size;
-				}
-
-				if (remaining == 0)
-				{
-					/* By subtracting the size of the last IOV from the offset, we ensure that we skip
-					   the remaining metadata bits at the beginning of the next buffer */
-					rdma_req->offset -= spdk_min(iov->iov_len, rdma_req->offset);
-					rdma_req->iovpos++;
-				}
-			}
+			rdma_req->offset = 0;
+			rdma_req->iovpos++;
 		}
 	}
 
@@ -4031,7 +3972,6 @@ srv_rdma_get_optimal_poll_group(struct spdk_srv_conn *conn)
 		pthread_mutex_unlock(&rtransport->lock);
 		return NULL;
 	}
-
 
 	pg = &rtransport->conn_sched.next_io_pg;
 

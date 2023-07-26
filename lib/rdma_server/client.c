@@ -116,7 +116,6 @@ void spdk_client_ctrlr_get_default_ctrlr_opts(struct spdk_client_ctrlr_opts *opt
 	SET_FIELD(fabrics_connect_timeout_us, CLIENT_FABRIC_CONNECT_COMMAND_TIMEOUT);
 	SET_FIELD(sector_size, DEFAULT_SECTOR_SIZE);
 	SET_FIELD(extended_lba_size, DEFAULT_EXTENDED_LBA_SIZE);
-	SET_FIELD(md_size, DEFAULT_MD_SIZE);
 	SET_FIELD(sectors_per_max_io, DEFAULT_SECTORS_PER_MAX_IO);
 	SET_FIELD(sectors_per_stripe, DEFAULT_SECTORS_PER_STRIPE);
 

@@ -258,7 +258,6 @@ struct client_request
 	 * This is used for I/O commands that are split into multiple requests.
 	 */
 	uint32_t payload_offset;
-	uint32_t md_offset;
 
 	uint32_t payload_size;
 
@@ -295,8 +294,6 @@ struct client_request
 	 */
 	pid_t pid;
 	struct spdk_req_cpl cpl;
-
-	uint32_t md_size;
 
 	/**
 	 * The following members should not be reordered with members
@@ -747,21 +744,20 @@ uint32_t client_qpair_abort_queued_reqs_with_cbarg(struct spdk_client_qpair *qpa
 void client_qpair_abort_queued_reqs(struct spdk_client_qpair *qpair, uint32_t dnr);
 void client_qpair_resubmit_requests(struct spdk_client_qpair *qpair, uint32_t num_requests);
 
-#define CLIENT_INIT_REQUEST(req, _cb_fn, _cb_arg, _payload, _payload_size, _md_size) \
-	do                                                                               \
-	{                                                                                \
-		req->cb_fn = _cb_fn;                                                         \
-		req->cb_arg = _cb_arg;                                                       \
-		req->payload = _payload;                                                     \
-		req->payload_size = _payload_size;                                           \
-		req->md_size = _md_size;                                                     \
-		req->pid = g_spdk_client_pid;                                                \
-		req->submit_tick = 0;                                                        \
-	} while (0);
+#define CLIENT_INIT_REQUEST(req, _cb_fn, _cb_arg, _payload, _payload_size) \
+do                                                                         \
+{                                                                          \
+	req->cb_fn = _cb_fn;                                                   \
+	req->cb_arg = _cb_arg;                                                 \
+	req->payload = _payload;                                               \
+	req->payload_size = _payload_size;                                     \
+	req->pid = g_spdk_client_pid;                                          \
+	req->submit_tick = 0;                                                  \
+} while (0);
 
 static inline struct client_request *
 client_allocate_request(struct spdk_client_qpair *qpair,
-						const struct client_payload *payload, uint32_t payload_size, uint32_t md_size,
+						const struct client_payload *payload, uint32_t payload_size,
 						spdk_req_cmd_cb cb_fn, void *cb_arg)
 {
 	struct client_request *req;
@@ -787,7 +783,7 @@ client_allocate_request(struct spdk_client_qpair *qpair,
 	 */
 	memset(req, 0, offsetof(struct client_request, payload_size));
 
-	CLIENT_INIT_REQUEST(req, cb_fn, cb_arg, *payload, payload_size, md_size);
+	CLIENT_INIT_REQUEST(req, cb_fn, cb_arg, *payload, payload_size);
 
 	return req;
 }
@@ -801,7 +797,7 @@ client_allocate_request_contig(struct spdk_client_qpair *qpair,
 
 	payload = CLIENT_PAYLOAD_CONTIG(buffer, NULL);
 
-	return client_allocate_request(qpair, &payload, payload_size, 0, cb_fn, cb_arg);
+	return client_allocate_request(qpair, &payload, payload_size, cb_fn, cb_arg);
 }
 
 static inline struct client_request *

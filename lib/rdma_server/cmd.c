@@ -38,7 +38,7 @@
 
 static inline struct client_request *_client_ns_cmd_rw(
 	struct spdk_client_qpair *qpair,
-	const struct client_payload *payload, uint32_t payload_offset, uint32_t md_offset,
+	const struct client_payload *payload, uint32_t payload_offset,
 	uint64_t lba, uint32_t lba_count, spdk_req_cmd_cb cb_fn,
 	void *cb_arg, uint32_t opc,
 	bool check_sgl, int *rc);
@@ -83,13 +83,14 @@ client_ns_map_failure_rc(uint32_t lba_count, uint32_t sectors_per_max_io,
 static struct client_request *
 _client_add_child_request(struct spdk_client_qpair *qpair,
 						  const struct client_payload *payload,
-						  uint32_t payload_offset, uint32_t md_offset,
-						  uint64_t lba, uint32_t lba_count, spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t opc,
+						  uint32_t payload_offset,
+						  uint64_t lba,
+						  uint32_t lba_count, spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t opc,
 						  struct client_request *parent, bool check_sgl, int *rc)
 {
 	struct client_request *child;
 
-	child = _client_ns_cmd_rw(qpair, payload, payload_offset, md_offset, lba, lba_count, cb_fn,
+	child = _client_ns_cmd_rw(qpair, payload, payload_offset, lba, lba_count, cb_fn,
 							  cb_arg, opc, check_sgl, rc);
 	if (child == NULL)
 	{
@@ -106,7 +107,7 @@ static struct client_request *
 _client_ns_cmd_split_request(
 	struct spdk_client_qpair *qpair,
 	const struct client_payload *payload,
-	uint32_t payload_offset, uint32_t md_offset,
+	uint32_t payload_offset,
 	uint64_t lba, uint32_t lba_count,
 	spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t opc,
 	struct client_request *req,
@@ -122,7 +123,7 @@ _client_ns_cmd_split_request(
 		lba_count = sectors_per_max_io - (lba & sector_mask);
 		lba_count = spdk_min(remaining_lba_count, lba_count);
 
-		child = _client_add_child_request(qpair, payload, payload_offset, md_offset,
+		child = _client_add_child_request(qpair, payload, payload_offset,
 										  lba, lba_count, cb_fn, cb_arg, opc,
 										  req, true, rc);
 		if (child == NULL)
@@ -133,7 +134,6 @@ _client_ns_cmd_split_request(
 		remaining_lba_count -= lba_count;
 		lba += lba_count;
 		payload_offset += lba_count * sector_size;
-		md_offset += lba_count * qpair->ctrlr->opts.md_size;
 	}
 
 	return req;
@@ -170,7 +170,7 @@ static struct client_request *
 _client_ns_cmd_split_request_sgl(
 	struct spdk_client_qpair *qpair,
 	const struct client_payload *payload,
-	uint32_t payload_offset, uint32_t md_offset,
+	uint32_t payload_offset,
 	uint64_t lba, uint32_t lba_count,
 	spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t opc,
 	struct client_request *req,
@@ -226,7 +226,7 @@ _client_ns_cmd_split_request_sgl(
 			 *  call to _client_ns_cmd_rw() to not bother with checking for SGL splitting
 			 *  since we have already verified it here.
 			 */
-			child = _client_add_child_request(qpair, payload, payload_offset, md_offset,
+			child = _client_add_child_request(qpair, payload, payload_offset,
 											  child_lba, child_lba_count,
 											  cb_fn, cb_arg, opc,
 											  req, false, rc);
@@ -235,7 +235,6 @@ _client_ns_cmd_split_request_sgl(
 				return NULL;
 			}
 			payload_offset += child_length;
-			md_offset += child_lba_count * qpair->ctrlr->opts.md_size;
 			child_lba += child_lba_count;
 			child_length = 0;
 			num_sges = 0;
@@ -253,7 +252,7 @@ _client_ns_cmd_split_request_sgl(
 
 static inline struct client_request *
 _client_ns_cmd_rw(struct spdk_client_qpair *qpair,
-				  const struct client_payload *payload, uint32_t payload_offset, uint32_t md_offset,
+				  const struct client_payload *payload, uint32_t payload_offset,
 				  uint64_t lba, uint32_t lba_count, spdk_req_cmd_cb cb_fn, void *cb_arg, uint32_t opc,
 				  bool check_sgl, int *rc)
 {
@@ -267,8 +266,7 @@ _client_ns_cmd_rw(struct spdk_client_qpair *qpair,
 
 	uint32_t max_payload_size = lba_count * sector_size;
 	max_payload_size = spdk_min(max_payload_size, payload->data_length - payload_offset);
-	req = client_allocate_request(qpair, payload, max_payload_size, lba_count * qpair->ctrlr->opts.md_size,
-								  cb_fn, cb_arg);
+	req = client_allocate_request(qpair, payload, max_payload_size, cb_fn, cb_arg);
 	if (req == NULL)
 	{
 		*rc = -ENOMEM;
@@ -276,7 +274,6 @@ _client_ns_cmd_rw(struct spdk_client_qpair *qpair,
 	}
 
 	req->payload_offset = payload_offset;
-	req->md_offset = md_offset;
 
 	/*
 	 * Intel DC P3*00 Client controllers benefit from driver-assisted striping.
@@ -288,21 +285,21 @@ _client_ns_cmd_rw(struct spdk_client_qpair *qpair,
 		(((lba & (sectors_per_stripe - 1)) + lba_count) > sectors_per_stripe))
 	{
 
-		return _client_ns_cmd_split_request(qpair, payload, payload_offset, md_offset, lba, lba_count,
+		return _client_ns_cmd_split_request(qpair, payload, payload_offset, lba, lba_count,
 											cb_fn,
 											cb_arg, opc,
 											req, sectors_per_stripe, sectors_per_stripe - 1, rc);
 	}
 	else if (lba_count > sectors_per_max_io)
 	{
-		return _client_ns_cmd_split_request(qpair, payload, payload_offset, md_offset, lba, lba_count,
+		return _client_ns_cmd_split_request(qpair, payload, payload_offset, lba, lba_count,
 											cb_fn,
 											cb_arg, opc,
 											req, sectors_per_max_io, 0, rc);
 	}
 	else if (client_payload_type(&req->payload) == CLIENT_PAYLOAD_TYPE_SGL && check_sgl)
 	{
-		return _client_ns_cmd_split_request_sgl(qpair, payload, payload_offset, md_offset,
+		return _client_ns_cmd_split_request_sgl(qpair, payload, payload_offset,
 												lba, lba_count, cb_fn, cb_arg, opc,
 												req, rc);
 	}
@@ -321,7 +318,7 @@ int spdk_client_ns_cmd_read(struct spdk_client_qpair *qpair, void *buffer,
 
 	payload = CLIENT_PAYLOAD_CONTIG(buffer, NULL);
 
-	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_READ,
+	req = _client_ns_cmd_rw(qpair, &payload, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_READ,
 							false, &rc);
 	if (req != NULL)
 	{
@@ -354,7 +351,7 @@ int spdk_client_ns_cmd_readv(struct spdk_client_qpair *qpair,
 
 	payload = CLIENT_PAYLOAD_SGL(reset_sgl_fn, next_sge_fn, cb_arg, NULL, 0, 0, 0, 0, NULL);
 
-	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_READ,
+	req = _client_ns_cmd_rw(qpair, &payload, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_READ,
 							true, &rc);
 	if (req != NULL)
 	{
@@ -380,7 +377,7 @@ int spdk_client_ns_cmd_write(struct spdk_client_qpair *qpair,
 
 	payload = CLIENT_PAYLOAD_CONTIG(buffer, NULL);
 
-	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_WRITE,
+	req = _client_ns_cmd_rw(qpair, &payload, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_WRITE,
 							false, &rc);
 	if (req != NULL)
 	{
@@ -413,7 +410,7 @@ int spdk_client_ns_cmd_writev(struct spdk_client_qpair *qpair,
 
 	payload = CLIENT_PAYLOAD_SGL(reset_sgl_fn, next_sge_fn, cb_arg, NULL, 0, 0, 0, 0, NULL);
 
-	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_WRITE,
+	req = _client_ns_cmd_rw(qpair, &payload, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_WRITE,
 							true, &rc);
 	if (req != NULL)
 	{
@@ -763,7 +760,7 @@ int spdk_client_rpc_request_write(struct spdk_client_qpair *qpair,
 
 	payload = CLIENT_PAYLOAD_SGL(reset_sgl_fn, next_sge_fn, cb_arg, NULL, rpc_request_id, data_length, rpc_opc, submit_type, md5sum);
 	SPDK_DEBUGLOG(rdma, "spdk_client_rpc_request_write send parent request lba_start=%d, lba_end=%d\n", 0, lba_count - 1);
-	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, 0, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_RPC_WRITE,
+	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_RPC_WRITE,
 							true, &rc);
 	if (req != NULL)
 	{
@@ -798,7 +795,7 @@ int spdk_client_rpc_request_read(struct spdk_client_qpair *qpair,
 
 	payload = CLIENT_PAYLOAD_SGL(reset_sgl_fn, next_sge_fn, cb_arg, NULL, rpc_request_id, data_length, rpc_opc, submit_type, NULL);
 
-	req = _client_ns_cmd_rw(qpair, &payload, 0, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_RPC_READ,
+	req = _client_ns_cmd_rw(qpair, &payload, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_RPC_READ,
 							true, &rc);
 	if (req != NULL)
 	{
