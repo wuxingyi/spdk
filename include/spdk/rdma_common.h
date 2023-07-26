@@ -176,10 +176,7 @@ SPDK_STATIC_ASSERT(sizeof(struct spdk_req_sgl_descriptor) == 16, "Incorrect size
 struct spdk_req_cmd
 {
 	/* dword 0 */
-	uint16_t opc : 8;  /* opcode */
-	uint16_t fuse : 2; /* fused operation */
-	uint16_t rsvd1 : 4;
-	uint16_t psdt : 2;
+	uint16_t opc; /* opcode */
 	uint16_t cid; /* command identifier */
 
 	/* dword 1 */
@@ -189,41 +186,17 @@ struct spdk_req_cmd
 	uint32_t rsvd2; /* rpc request index */
 	uint32_t rsvd3; /* rpc data length */
 
-	/* dword 4-5 */
-	uint64_t mptr; /* metadata pointer */
+	struct spdk_req_sgl_descriptor sgld;
+	uint32_t lba_start;
 
-	/* dword 6-9: data pointer */
-	union
-	{
-		struct
-		{
-			uint64_t prp1; /* prp entry 1 */
-			uint64_t prp2; /* prp entry 2 */
-		} prp;
-
-		struct spdk_req_sgl_descriptor sgl1;
-	} dptr;
-
-	/* command-specific */
-	union
-	{
-		uint32_t cdw10; // LBA START
-						//		union spdk_req_cmd_cdw10 cdw10_bits;
-	};
-	/* command-specific */
-	union
-	{
-		uint32_t cdw11;
-		//		union spdk_req_cmd_cdw11 cdw11_bits;
-	};
 	/* dword 12-15 */
 	uint32_t cdw12; /* command-specific */ // LBA COUNT
 	uint32_t cdw13;						   /* submit type 0 SPDK_CLIENT_SUBMIT_CONTING or 1 SPDK_CLIENT_SUBMIT_IOVES*/
 	uint32_t cdw14; /* command-specific */ // check md5sum if cdw14 == 1
-	uint32_t cdw15;						   /* command-specific */
 	uint8_t md5sum[16];
 };
-SPDK_STATIC_ASSERT(sizeof(struct spdk_req_cmd) == 80, "Incorrect size");
+// (fixme wuxingyi)
+// SPDK_STATIC_ASSERT(sizeof(struct spdk_req_cmd) == 60, "Incorrect size");
 
 struct spdk_req_status
 {

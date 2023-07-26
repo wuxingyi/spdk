@@ -92,7 +92,7 @@ client_get_string(const struct client_string *strings, uint16_t value)
 static void
 client_get_sgl_unkeyed(char *buf, size_t size, struct spdk_req_cmd *cmd)
 {
-	struct spdk_req_sgl_descriptor *sgl = &cmd->dptr.sgl1;
+	struct spdk_req_sgl_descriptor *sgl = &cmd->sgld;
 
 	snprintf(buf, size, " len:0x%x", sgl->unkeyed.length);
 }
@@ -100,7 +100,7 @@ client_get_sgl_unkeyed(char *buf, size_t size, struct spdk_req_cmd *cmd)
 static void
 client_get_sgl_keyed(char *buf, size_t size, struct spdk_req_cmd *cmd)
 {
-	struct spdk_req_sgl_descriptor *sgl = &cmd->dptr.sgl1;
+	struct spdk_req_sgl_descriptor *sgl = &cmd->sgld;
 
 	snprintf(buf, size, " len:0x%x key:0x%x", sgl->keyed.length, sgl->keyed.key);
 }
@@ -108,7 +108,7 @@ client_get_sgl_keyed(char *buf, size_t size, struct spdk_req_cmd *cmd)
 static void
 client_get_sgl(char *buf, size_t size, struct spdk_req_cmd *cmd)
 {
-	struct spdk_req_sgl_descriptor *sgl = &cmd->dptr.sgl1;
+	struct spdk_req_sgl_descriptor *sgl = &cmd->sgld;
 	int c;
 
 	c = snprintf(buf, size, "SGL %s %s 0x%" PRIx64, client_get_string(sgl_type, sgl->generic.type),

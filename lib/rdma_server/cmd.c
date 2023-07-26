@@ -148,7 +148,7 @@ _client_ns_cmd_setup_request(struct client_request *req,
 	cmd = &req->cmd;
 	cmd->opc = opc;
 
-	*(uint64_t *)&cmd->cdw10 = lba;
+	*(uint64_t *)&cmd->lba_start = lba;
 
 	cmd->cdw12 = lba_count - 1;
 

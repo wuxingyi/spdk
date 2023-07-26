@@ -488,7 +488,7 @@ extern "C"
 	{
 		enum spdk_srv_data_transfer xfer;
 		struct spdk_req_cmd *cmd = req->cmd;
-		struct spdk_req_sgl_descriptor *sgl = &cmd->dptr.sgl1;
+		struct spdk_req_sgl_descriptor *sgl = &cmd->sgld;
 
 		xfer = spdk_srv_opc_get_data_transfer(cmd->opc);
 

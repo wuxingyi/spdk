@@ -1643,8 +1643,6 @@ client_rdma_build_null_request(struct spdk_client_rdma_req *rdma_req)
 {
 	struct client_request *req = rdma_req->req;
 
-	req->cmd.psdt = SPDK_CLIENT_PSDT_SGL_MPTR_CONTIG;
-
 	/* The first element of this SGL is pointing at an
 	 * spdk_client_cmd object. For this particular command,
 	 * we only need the first 64 bytes corresponding to
@@ -1654,11 +1652,11 @@ client_rdma_build_null_request(struct spdk_client_rdma_req *rdma_req)
 	/* The RDMA SGL needs one element describing the Client command. */
 	rdma_req->send_wr.num_sge = 1;
 
-	req->cmd.dptr.sgl1.keyed.type = SPDK_CLIENT_SGL_TYPE_KEYED_DATA_BLOCK;
-	req->cmd.dptr.sgl1.keyed.subtype = SPDK_CLIENT_SGL_SUBTYPE_ADDRESS;
-	req->cmd.dptr.sgl1.keyed.length = 0;
-	req->cmd.dptr.sgl1.keyed.key = 0;
-	req->cmd.dptr.sgl1.address = 0;
+	req->cmd.sgld.keyed.type = SPDK_CLIENT_SGL_TYPE_KEYED_DATA_BLOCK;
+	req->cmd.sgld.keyed.subtype = SPDK_CLIENT_SGL_SUBTYPE_ADDRESS;
+	req->cmd.sgld.keyed.length = 0;
+	req->cmd.sgld.keyed.key = 0;
+	req->cmd.sgld.address = 0;
 
 	return 0;
 }
@@ -1701,13 +1699,12 @@ client_rdma_build_contig_inline_request(struct client_rdma_qpair *rqpair,
 	 * payload. */
 	rdma_req->send_wr.num_sge = 2;
 
-	req->cmd.psdt = SPDK_CLIENT_PSDT_SGL_MPTR_CONTIG;
-	req->cmd.dptr.sgl1.unkeyed.type = SPDK_CLIENT_SGL_TYPE_DATA_BLOCK;
-	req->cmd.dptr.sgl1.unkeyed.subtype = SPDK_CLIENT_SGL_SUBTYPE_OFFSET;
-	req->cmd.dptr.sgl1.unkeyed.length = (uint32_t)ctx.length;
+	req->cmd.sgld.unkeyed.type = SPDK_CLIENT_SGL_TYPE_DATA_BLOCK;
+	req->cmd.sgld.unkeyed.subtype = SPDK_CLIENT_SGL_SUBTYPE_OFFSET;
+	req->cmd.sgld.unkeyed.length = (uint32_t)ctx.length;
 	/* Inline only supported for icdoff == 0 currently.  This function will
 	 * not get called for controllers with other values. */
-	req->cmd.dptr.sgl1.address = (uint64_t)0;
+	req->cmd.sgld.address = (uint64_t)0;
 
 	return 0;
 }
@@ -1741,7 +1738,7 @@ client_rdma_build_contig_request(struct client_rdma_qpair *rqpair,
 		return -1;
 	}
 
-	req->cmd.dptr.sgl1.keyed.key = ctx.rkey;
+	req->cmd.sgld.keyed.key = ctx.rkey;
 
 	/* The first element of this SGL is pointing at an
 	 * spdk_client_cmd object. For this particular command,
@@ -1752,11 +1749,10 @@ client_rdma_build_contig_request(struct client_rdma_qpair *rqpair,
 	/* The RDMA SGL needs one element describing the Client command. */
 	rdma_req->send_wr.num_sge = 1;
 
-	req->cmd.psdt = SPDK_CLIENT_PSDT_SGL_MPTR_CONTIG;
-	req->cmd.dptr.sgl1.keyed.type = SPDK_CLIENT_SGL_TYPE_KEYED_DATA_BLOCK;
-	req->cmd.dptr.sgl1.keyed.subtype = SPDK_CLIENT_SGL_SUBTYPE_ADDRESS;
-	req->cmd.dptr.sgl1.keyed.length = (uint32_t)ctx.length;
-	req->cmd.dptr.sgl1.address = (uint64_t)ctx.addr;
+	req->cmd.sgld.keyed.type = SPDK_CLIENT_SGL_TYPE_KEYED_DATA_BLOCK;
+	req->cmd.sgld.keyed.subtype = SPDK_CLIENT_SGL_SUBTYPE_ADDRESS;
+	req->cmd.sgld.keyed.length = (uint32_t)ctx.length;
+	req->cmd.sgld.address = (uint64_t)ctx.addr;
 
 	return 0;
 }
@@ -1824,8 +1820,6 @@ client_rdma_build_sgl_request(struct client_rdma_qpair *rqpair,
 		return -1;
 	}
 
-	req->cmd.psdt = SPDK_CLIENT_PSDT_SGL_MPTR_CONTIG;
-
 	/* The RDMA SGL needs one element describing some portion
 	 * of the spdk_client_cmd structure. */
 	rdma_req->send_wr.num_sge = 1;
@@ -1842,11 +1836,11 @@ client_rdma_build_sgl_request(struct client_rdma_qpair *rqpair,
 		 * the Client command. */
 		rdma_req->send_sgl[0].length = sizeof(struct spdk_req_cmd);
 
-		req->cmd.dptr.sgl1.keyed.type = cmd->sgl[0].keyed.type;
-		req->cmd.dptr.sgl1.keyed.subtype = cmd->sgl[0].keyed.subtype;
-		req->cmd.dptr.sgl1.keyed.length = cmd->sgl[0].keyed.length;
-		req->cmd.dptr.sgl1.keyed.key = cmd->sgl[0].keyed.key;
-		req->cmd.dptr.sgl1.address = cmd->sgl[0].address;
+		req->cmd.sgld.keyed.type = cmd->sgl[0].keyed.type;
+		req->cmd.sgld.keyed.subtype = cmd->sgl[0].keyed.subtype;
+		req->cmd.sgld.keyed.length = cmd->sgl[0].keyed.length;
+		req->cmd.sgld.keyed.key = cmd->sgl[0].keyed.key;
+		req->cmd.sgld.address = cmd->sgl[0].address;
 	}
 	else
 	{
@@ -1864,10 +1858,10 @@ client_rdma_build_sgl_request(struct client_rdma_qpair *rqpair,
 		}
 		rdma_req->send_sgl[0].length = sizeof(struct spdk_req_cmd) + descriptors_size;
 
-		req->cmd.dptr.sgl1.unkeyed.type = SPDK_CLIENT_SGL_TYPE_LAST_SEGMENT;
-		req->cmd.dptr.sgl1.unkeyed.subtype = SPDK_CLIENT_SGL_SUBTYPE_OFFSET;
-		req->cmd.dptr.sgl1.unkeyed.length = descriptors_size;
-		req->cmd.dptr.sgl1.address = (uint64_t)0;
+		req->cmd.sgld.unkeyed.type = SPDK_CLIENT_SGL_TYPE_LAST_SEGMENT;
+		req->cmd.sgld.unkeyed.subtype = SPDK_CLIENT_SGL_SUBTYPE_OFFSET;
+		req->cmd.sgld.unkeyed.length = descriptors_size;
+		req->cmd.sgld.address = (uint64_t)0;
 	}
 
 	return 0;
@@ -1927,13 +1921,12 @@ client_rdma_build_sgl_inline_request(struct client_rdma_qpair *rqpair,
 	 * the Client command. */
 	rdma_req->send_sgl[0].length = sizeof(struct spdk_req_cmd);
 
-	req->cmd.psdt = SPDK_CLIENT_PSDT_SGL_MPTR_CONTIG;
-	req->cmd.dptr.sgl1.unkeyed.type = SPDK_CLIENT_SGL_TYPE_DATA_BLOCK;
-	req->cmd.dptr.sgl1.unkeyed.subtype = SPDK_CLIENT_SGL_SUBTYPE_OFFSET;
-	req->cmd.dptr.sgl1.unkeyed.length = (uint32_t)ctx.length;
+	req->cmd.sgld.unkeyed.type = SPDK_CLIENT_SGL_TYPE_DATA_BLOCK;
+	req->cmd.sgld.unkeyed.subtype = SPDK_CLIENT_SGL_SUBTYPE_OFFSET;
+	req->cmd.sgld.unkeyed.length = (uint32_t)ctx.length;
 	/* Inline only supported for icdoff == 0 currently.  This function will
 	 * not get called for controllers with other values. */
-	req->cmd.dptr.sgl1.address = (uint64_t)0;
+	req->cmd.sgld.address = (uint64_t)0;
 
 	return 0;
 }

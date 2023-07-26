@@ -1699,7 +1699,7 @@ static inline void
 srv_rdma_setup_request(struct spdk_srv_rdma_request *rdma_req)
 {
 	struct ibv_send_wr *wr = &rdma_req->data.wr;
-	struct spdk_req_sgl_descriptor *sgl = &rdma_req->req.cmd->dptr.sgl1;
+	struct spdk_req_sgl_descriptor *sgl = &rdma_req->req.cmd->sgld;
 
 	wr->wr.rdma.rkey = sgl->keyed.key;
 	wr->wr.rdma.remote_addr = sgl->address;
@@ -1710,7 +1710,7 @@ static inline void
 srv_rdma_update_remote_addr(struct spdk_srv_rdma_request *rdma_req, uint32_t num_wrs)
 {
 	struct ibv_send_wr *wr = &rdma_req->data.wr;
-	struct spdk_req_sgl_descriptor *sgl = &rdma_req->req.cmd->dptr.sgl1;
+	struct spdk_req_sgl_descriptor *sgl = &rdma_req->req.cmd->sgld;
 	uint32_t i;
 	int j;
 	uint64_t remote_addr_offset = 0;
@@ -1876,7 +1876,7 @@ srv_rdma_request_fill_iovs_multi_sgl(struct spdk_srv_rdma_transport *rtransport,
 	rconn = SPDK_CONTAINEROF(rdma_req->req.conn, struct spdk_srv_rdma_conn, conn);
 	rgroup = rconn->poller->group;
 
-	inline_segment = &req->cmd->dptr.sgl1;
+	inline_segment = &req->cmd->sgld;
 	assert(inline_segment->generic.type == SPDK_SRV_SGL_TYPE_LAST_SEGMENT);
 	assert(inline_segment->unkeyed.subtype == SPDK_SRV_SGL_SUBTYPE_OFFSET);
 
@@ -1981,7 +1981,7 @@ srv_rdma_request_parse_sgl(struct spdk_srv_rdma_transport *rtransport,
 	uint32_t length;
 
 	rsp = req->rsp;
-	sgl = &req->cmd->dptr.sgl1;
+	sgl = &req->cmd->sgld;
 
 	if (sgl->generic.type == SPDK_SRV_SGL_TYPE_KEYED_DATA_BLOCK &&
 		(sgl->keyed.subtype == SPDK_SRV_SGL_SUBTYPE_ADDRESS ||
@@ -2180,7 +2180,7 @@ static void srv_rpc_write_request_exec(struct spdk_srv_rdma_request *rdma_req)
 				exit(-1);
 			}
 			// 检查一下LBA起始的数值，按理说应该是256的整数倍,因为sector_size 是512字节，一次最大传输单元是128K
-			lba_start = rdma_req->req.cmd->cdw10;
+			lba_start = rdma_req->req.cmd->lba_start;
 			subrequest_id = lba_start / (max_io_size / 512);
 			iov_offset = subrequest_id * SPDK_SRV_MAX_SGL_ENTRIES;
 			for (int i = 0; i < rdma_req->req.iovcnt; i++)
@@ -2204,7 +2204,7 @@ static void srv_rpc_write_request_exec(struct spdk_srv_rdma_request *rdma_req)
 	}
 	else if (rpc_req->state == WAIT_OTHER_SUBREQUEST)
 	{
-		lba_start = rdma_req->req.cmd->cdw10;
+		lba_start = rdma_req->req.cmd->lba_start;
 		subrequest_id = lba_start / (max_io_size / 512);
 		iov_offset = subrequest_id * SPDK_SRV_MAX_SGL_ENTRIES;
 		for (int i = 0; i < rdma_req->req.iovcnt; i++)
@@ -2303,7 +2303,7 @@ static void srv_rpc_read_request_exec(struct spdk_srv_rdma_request *rdma_req)
 
 	if (rpc_req->state == PENDING_READ)
 	{
-		lba_start = rdma_req->req.cmd->cdw10;
+		lba_start = rdma_req->req.cmd->lba_start;
 		out_data_offset = lba_start * 512;
 		out_remain_len = rpc_req->out_real_length - out_data_offset;
 		out_remain_len = spdk_min(out_remain_len, max_io_size);
