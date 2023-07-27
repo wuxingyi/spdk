@@ -1163,4 +1163,9 @@ void client_disconnected_qpair_cb(struct spdk_client_qpair *qpair, void *poll_gr
 	client_transport_ctrlr_delete_io_qpair(group->ctrlr, qpair);
 }
 
+bool spdk_client_ctrlr_has_free_memory(struct spdk_client_qpair *qpair, size_t size) {
+    size_t pool_size = spdk_mempool_count(qpair->ctrlr->rpc_data_mp);
+    return size <= pool_size * qpair->ctrlr->io_unit_size;
+}
+
 SPDK_LOG_REGISTER_COMPONENT(client)

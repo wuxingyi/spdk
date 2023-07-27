@@ -1148,6 +1148,7 @@ extern "C"
 	int spdk_client_submit_rpc_request_iovs_directly(struct spdk_client_qpair *qpair, struct iovec *out_ioves, int out_iov_cnt, uint32_t length, spdk_rpc_request_cb cb_fn, void *cb_arg);
 
 	void spdk_client_reclaim_rpc_request(struct rpc_request *req);
+	bool spdk_client_ctrlr_has_free_memory(struct spdk_client_qpair *qpair, size_t size);
 
 /*
  * Macro used to register new transports.
