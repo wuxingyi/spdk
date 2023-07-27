@@ -229,16 +229,10 @@ extern "C"
 		/* used to calculate mdts */
 		uint32_t max_io_size;
 		uint32_t io_unit_size;
-		uint32_t max_aq_depth;
 		uint32_t num_shared_buffers;
 		uint32_t buf_cache_size;
-		bool dif_insert_or_strip;
 
 		uint32_t abort_timeout_sec;
-		/* ms */
-		uint32_t association_timeout;
-
-		const struct spdk_json_val *transport_specific;
 
 		/**
 		 * The size of spdk_srv_transport_opts according to the caller of this library is used for ABI
@@ -248,21 +242,6 @@ extern "C"
 		 */
 		size_t opts_size;
 		uint32_t acceptor_poll_rate;
-		/* Use zero-copy operations if the underlying bdev supports them */
-		bool zcopy;
-	};
-
-	struct spdk_srv_listen_opts
-	{
-		/**
-		 * The size of spdk_srv_listen_opts according to the caller of this library is used for ABI
-		 * compatibility. The library uses this field to know how many fields in this
-		 * structure are valid. And the library will populate any remaining fields with default values.
-		 * New added fields should be put at the end of the struct.
-		 */
-		size_t opts_size;
-
-		const struct spdk_json_val *transport_specific;
 	};
 
 	struct spdk_srv_transport_ops
@@ -303,8 +282,7 @@ extern "C"
 		 * Instruct the transport to accept new connections at the address
 		 * provided. This may be called multiple times.
 		 */
-		int (*listen)(struct spdk_srv_transport *transport, const struct spdk_srv_transport_id *trid,
-					  struct spdk_srv_listen_opts *opts);
+		int (*listen)(struct spdk_srv_transport *transport, const struct spdk_srv_transport_id *trid);
 
 		/**
 		 * Dump transport-specific listen opts into JSON
@@ -386,15 +364,6 @@ extern "C"
 		 */
 		int (*conn_get_listen_trid)(struct spdk_srv_conn *conn,
 									struct spdk_srv_transport_id *trid);
-
-		/*
-		 * Abort the request which the abort request specifies.
-		 * This function can complete synchronously or asynchronously, but
-		 * is expected to call spdk_srv_request_complete() in the end
-		 * for both cases.
-		 */
-		void (*conn_abort_request)(struct spdk_srv_conn *conn,
-								   struct spdk_srv_request *req);
 
 		/*
 		 * Dump transport poll group statistics into JSON.
@@ -696,7 +665,7 @@ extern "C"
 	 */
 	int
 	spdk_srv_transport_listen(struct spdk_srv_transport *transport,
-							  const struct spdk_srv_transport_id *trid, struct spdk_srv_listen_opts *opts);
+							  const struct spdk_srv_transport_id *trid);
 
 	/**
 	 * Remove listener from transport and stop accepting new connections.

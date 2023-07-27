@@ -2736,7 +2736,6 @@ bool srv_rdma_request_process(struct spdk_srv_rdma_transport *rtransport,
 #define SPDK_SRV_RDMA_DEFAULT_NUM_SHARED_BUFFERS 4095
 #define SPDK_SRV_RDMA_DEFAULT_BUFFER_CACHE_SIZE 32
 #define SPDK_SRV_RDMA_DEFAULT_NO_SRQ false
-#define SPDK_SRV_RDMA_DIF_INSERT_OR_STRIP false
 #define SPDK_SRV_RDMA_ACCEPTOR_BACKLOG 100
 #define SPDK_SRV_RDMA_DEFAULT_ABORT_TIMEOUT_SEC 1
 #define SPDK_SRV_RDMA_DEFAULT_NO_WR_BATCHING true // try set this
@@ -2749,12 +2748,9 @@ srv_rdma_opts_init(struct spdk_srv_transport_opts *opts)
 	opts->in_capsule_data_size = SPDK_SRV_RDMA_DEFAULT_IN_CAPSULE_DATA_SIZE;
 	opts->max_io_size = SPDK_SRV_RDMA_DEFAULT_MAX_IO_SIZE;
 	opts->io_unit_size = SPDK_SRV_RDMA_MIN_IO_BUFFER_SIZE;
-	opts->max_aq_depth = SPDK_SRV_RDMA_DEFAULT_AQ_DEPTH;
 	opts->num_shared_buffers = SPDK_SRV_RDMA_DEFAULT_NUM_SHARED_BUFFERS;
 	opts->buf_cache_size = SPDK_SRV_RDMA_DEFAULT_BUFFER_CACHE_SIZE;
-	opts->dif_insert_or_strip = SPDK_SRV_RDMA_DIF_INSERT_OR_STRIP;
 	opts->abort_timeout_sec = SPDK_SRV_RDMA_DEFAULT_ABORT_TIMEOUT_SEC;
-	opts->transport_specific = NULL;
 }
 
 static int srv_rdma_destroy(struct spdk_srv_transport *transport,
@@ -2826,20 +2822,11 @@ srv_rdma_create(struct spdk_srv_transport_opts *opts)
 	rtransport->rdma_opts.no_srq = SPDK_SRV_RDMA_DEFAULT_NO_SRQ;
 	rtransport->rdma_opts.acceptor_backlog = SPDK_SRV_RDMA_ACCEPTOR_BACKLOG;
 	rtransport->rdma_opts.no_wr_batching = SPDK_SRV_RDMA_DEFAULT_NO_WR_BATCHING;
-	if (opts->transport_specific != NULL &&
-		spdk_json_decode_object_relaxed(opts->transport_specific, rdma_transport_opts_decoder,
-										SPDK_COUNTOF(rdma_transport_opts_decoder),
-										&rtransport->rdma_opts))
-	{
-		SPDK_ERRLOG("spdk_json_decode_object_relaxed failed\n");
-		srv_rdma_destroy(&rtransport->transport, NULL, NULL);
-		return NULL;
-	}
 
 	SPDK_INFOLOG(rdma, "*** RDMA Transport Init ***\n"
 					   "  Transport opts:  max_ioq_depth=%d, max_io_size=%d,\n"
 					   "  max_io_conns_per_ctrlr=%d, io_unit_size=%d,\n"
-					   "  in_capsule_data_size=%d, max_aq_depth=%d,\n"
+					   "  in_capsule_data_size=%d,\n"
 					   "  num_shared_buffers=%d, num_cqe=%d, max_srq_depth=%d, no_srq=%d,"
 					   "  acceptor_backlog=%d, no_wr_batching=%d abort_timeout_sec=%d\n",
 				 opts->max_queue_depth,
@@ -2847,7 +2834,6 @@ srv_rdma_create(struct spdk_srv_transport_opts *opts)
 				 opts->max_conns_per_tgt - 1,
 				 opts->io_unit_size,
 				 opts->in_capsule_data_size,
-				 opts->max_aq_depth,
 				 opts->num_shared_buffers,
 				 rtransport->rdma_opts.num_cqe,
 				 rtransport->rdma_opts.max_srq_depth,
@@ -3161,8 +3147,7 @@ srv_rdma_trid_from_cm_id(struct rdma_cm_id *id,
 						 bool peer);
 
 static int
-srv_rdma_listen(struct spdk_srv_transport *transport, const struct spdk_srv_transport_id *trid,
-				struct spdk_srv_listen_opts *listen_opts)
+srv_rdma_listen(struct spdk_srv_transport *transport, const struct spdk_srv_transport_id *trid)
 {
 	struct spdk_srv_rdma_transport *rtransport;
 	struct spdk_srv_rdma_device *device;
@@ -3522,7 +3507,7 @@ srv_rdma_handle_cm_event_addr_change(struct spdk_srv_transport *transport,
 		srv_rdma_disconnect_conns_on_port(rtransport, port);
 
 		srv_rdma_stop_listen(transport, trid);
-		srv_rdma_listen(transport, trid, NULL);
+		srv_rdma_listen(transport, trid);
 	}
 
 	return event_acked;
@@ -4765,117 +4750,6 @@ srv_rdma_conn_get_listen_trid(struct spdk_srv_conn *conn,
 }
 
 static void
-srv_rdma_request_set_abort_status(struct spdk_srv_request *req,
-								  struct spdk_srv_rdma_request *rdma_req_to_abort)
-{
-	rdma_req_to_abort->req.rsp->status.sc = SPDK_SRV_SC_ABORTED_BY_REQUEST;
-
-	rdma_req_to_abort->state = RDMA_REQUEST_STATE_READY_TO_COMPLETE;
-
-	req->rsp->cdw0 &= ~1U; /* Command was successfully aborted. */
-}
-
-static int
-_srv_rdma_conn_abort_request(void *ctx)
-{
-	struct spdk_srv_request *req = ctx;
-	struct spdk_srv_rdma_request *rdma_req_to_abort = SPDK_CONTAINEROF(
-		req->req_to_abort, struct spdk_srv_rdma_request, req);
-	struct spdk_srv_rdma_conn *rconn = SPDK_CONTAINEROF(req->req_to_abort->conn,
-														struct spdk_srv_rdma_conn, conn);
-	int rc;
-
-	spdk_poller_unregister(&req->poller);
-
-	switch (rdma_req_to_abort->state)
-	{
-	case RDMA_REQUEST_STATE_EXECUTING:
-
-		break;
-
-	case RDMA_REQUEST_STATE_NEED_BUFFER:
-		STAILQ_REMOVE(&rconn->poller->group->group.pending_buf_queue,
-					  &rdma_req_to_abort->req, spdk_srv_request, buf_link);
-
-		srv_rdma_request_set_abort_status(req, rdma_req_to_abort);
-		break;
-
-	case RDMA_REQUEST_STATE_DATA_TRANSFER_TO_CONTROLLER_PENDING:
-		STAILQ_REMOVE(&rconn->pending_rdma_read_queue, rdma_req_to_abort,
-					  spdk_srv_rdma_request, state_link);
-
-		srv_rdma_request_set_abort_status(req, rdma_req_to_abort);
-		break;
-
-	case RDMA_REQUEST_STATE_DATA_TRANSFER_TO_HOST_PENDING:
-		STAILQ_REMOVE(&rconn->pending_rdma_write_queue, rdma_req_to_abort,
-					  spdk_srv_rdma_request, state_link);
-
-		srv_rdma_request_set_abort_status(req, rdma_req_to_abort);
-		break;
-
-	case RDMA_REQUEST_STATE_TRANSFERRING_HOST_TO_CONTROLLER:
-		if (spdk_get_ticks() < req->timeout_tsc)
-		{
-			req->poller = SPDK_POLLER_REGISTER(_srv_rdma_conn_abort_request, req, 0);
-			return SPDK_POLLER_BUSY;
-		}
-		break;
-
-	default:
-		break;
-	}
-
-	spdk_srv_request_complete(req);
-	return SPDK_POLLER_BUSY;
-}
-
-static void
-srv_rdma_conn_abort_request(struct spdk_srv_conn *conn,
-							struct spdk_srv_request *req)
-{
-	struct spdk_srv_rdma_conn *rconn;
-	struct spdk_srv_rdma_transport *rtransport;
-	struct spdk_srv_transport *transport;
-	uint16_t cid;
-	uint32_t i, max_req_count;
-	struct spdk_srv_rdma_request *rdma_req_to_abort = NULL, *rdma_req;
-
-	rconn = SPDK_CONTAINEROF(conn, struct spdk_srv_rdma_conn, conn);
-	rtransport = SPDK_CONTAINEROF(conn->transport, struct spdk_srv_rdma_transport, transport);
-	transport = &rtransport->transport;
-	cid = req->cmd->cid;
-	max_req_count = rconn->srq == NULL ? rconn->max_queue_depth : rconn->poller->max_srq_depth;
-
-	for (i = 0; i < max_req_count; i++)
-	{
-		rdma_req = &rconn->resources->reqs[i];
-		/* When SRQ == NULL, rconn has its own requests and req.conn pointer always points to the conn
-		 * When SRQ != NULL all rconns share common requests and conn pointer is assigned when we start to
-		 * process a request. So in both cases all requests which are not in FREE state have valid conn ptr */
-		if (rdma_req->state != RDMA_REQUEST_STATE_FREE && rdma_req->req.cmd->cid == cid &&
-			rdma_req->req.conn == conn)
-		{
-			rdma_req_to_abort = rdma_req;
-			break;
-		}
-	}
-
-	if (rdma_req_to_abort == NULL)
-	{
-		spdk_srv_request_complete(req);
-		return;
-	}
-
-	req->req_to_abort = &rdma_req_to_abort->req;
-	req->timeout_tsc = spdk_get_ticks() +
-					   transport->opts.abort_timeout_sec * spdk_get_ticks_hz();
-	req->poller = NULL;
-
-	_srv_rdma_conn_abort_request(req);
-}
-
-static void
 srv_rdma_poll_group_dump_stat(struct spdk_srv_transport_poll_group *group,
 							  struct spdk_json_write_ctx *w)
 {
@@ -4950,7 +4824,6 @@ const struct spdk_srv_transport_ops spdk_srv_transport_rdma = {
 	.conn_get_peer_trid = srv_rdma_conn_get_peer_trid,
 	.conn_get_local_trid = srv_rdma_conn_get_local_trid,
 	.conn_get_listen_trid = srv_rdma_conn_get_listen_trid,
-	.conn_abort_request = srv_rdma_conn_abort_request,
 
 	.poll_group_dump_stat = srv_rdma_poll_group_dump_stat,
 };

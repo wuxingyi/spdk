@@ -897,44 +897,6 @@ void client_ctrlr_destruct(struct spdk_client_ctrlr *ctrlr)
 	}
 }
 
-int client_request_check_timeout(struct client_request *req, uint16_t cid,
-								 struct spdk_client_ctrlr_process *active_proc,
-								 uint64_t now_tick)
-{
-	struct spdk_client_qpair *qpair = req->qpair;
-	struct spdk_client_ctrlr *ctrlr = qpair->ctrlr;
-	uint64_t timeout_ticks = active_proc->timeout_io_ticks;
-
-	assert(active_proc->timeout_cb_fn != NULL);
-
-	if (req->timed_out || req->submit_tick == 0)
-	{
-		return 0;
-	}
-
-	if (req->pid != g_spdk_client_pid)
-	{
-		return 0;
-	}
-
-	if (req->submit_tick + timeout_ticks > now_tick)
-	{
-		return 1;
-	}
-
-	req->timed_out = true;
-
-	/*
-	 * We don't want to expose the admin queue to the user,
-	 * so when we're timing out admin commands set the
-	 * qpair to NULL.
-	 */
-	active_proc->timeout_cb_fn(active_proc->timeout_cb_arg, ctrlr,
-							   qpair,
-							   cid);
-	return 0;
-}
-
 uint64_t
 spdk_client_ctrlr_get_flags(struct spdk_client_ctrlr *ctrlr)
 {

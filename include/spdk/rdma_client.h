@@ -1129,8 +1129,8 @@ extern "C"
 
 	/**
 
- * Opaque handle for a transport poll group. Used by the transport function table.
- */
+	 * Opaque handle for a transport poll group. Used by the transport function table.
+	 */
 	struct spdk_client_transport_poll_group;
 
 	/**
@@ -1198,8 +1198,6 @@ extern "C"
 		int (*qpair_iterate_requests)(struct spdk_client_qpair *qpair,
 									  int (*iter_fn)(struct client_request *req, void *arg),
 									  void *arg);
-
-		void (*admin_qpair_abort_aers)(struct spdk_client_qpair *qpair);
 
 		struct spdk_client_transport_poll_group *(*poll_group_create)(void);
 		struct spdk_client_transport_poll_group *(*qpair_get_optimal_poll_group)(

@@ -322,39 +322,6 @@ void spdk_srv_tgt_destroy(struct spdk_srv_tgt *tgt,
 	spdk_io_device_unregister(tgt, srv_tgt_destroy_cb);
 }
 
-static void
-srv_listen_opts_copy(struct spdk_srv_listen_opts *opts,
-					 const struct spdk_srv_listen_opts *opts_src, size_t opts_size)
-{
-	assert(opts);
-	assert(opts_src);
-
-	opts->opts_size = opts_size;
-
-#define SET_FIELD(field)                                                                 \
-	if (offsetof(struct spdk_srv_listen_opts, field) + sizeof(opts->field) <= opts_size) \
-	{                                                                                    \
-		opts->field = opts_src->field;                                                   \
-	}
-
-	SET_FIELD(transport_specific);
-#undef SET_FIELD
-
-	/* Do not remove this statement, you should always update this statement when you adding a new field,
-	 * and do not forget to add the SET_FIELD statement for your added field. */
-	SPDK_STATIC_ASSERT(sizeof(struct spdk_srv_listen_opts) == 16, "Incorrect size");
-}
-
-static void
-spdk_srv_listen_opts_init(struct spdk_srv_listen_opts *opts, size_t opts_size)
-{
-	struct spdk_srv_listen_opts opts_local = {};
-
-	/* local version of opts should have defaults set here */
-
-	srv_listen_opts_copy(opts, &opts_local, opts_size);
-}
-
 int spdk_srv_tgt_stop_listen(struct spdk_srv_tgt *tgt,
 							 struct spdk_srv_transport_id *trid)
 {

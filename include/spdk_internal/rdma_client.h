@@ -554,8 +554,6 @@ struct spdk_client_ctrlr
 
 	bool is_destructed;
 
-	bool timeout_enabled;
-
 	/* The application is preparing to reset the controller.  Transports
 	 * can use this to skip unnecessary parts of the qpair deletion process
 	 * for example, like the DELETE_SQ/CQ commands.
@@ -944,9 +942,6 @@ client_request_free_children(struct client_request *req)
 		client_free_request(child);
 	}
 }
-
-int client_request_check_timeout(struct client_request *req, uint16_t cid,
-								 struct spdk_client_ctrlr_process *active_proc, uint64_t now_tick);
 
 int client_robust_mutex_init_shared(pthread_mutex_t *mtx);
 int client_robust_mutex_init_recursive_shared(pthread_mutex_t *mtx);

@@ -703,7 +703,7 @@ static int hello_rdma_init(struct hello_context_t *ctx)
 	spdk_srv_tgt_add_transport(ctx->tgt, ctx->transport, tgt_add_transport_done, ctx);
 	spdk_srv_rpc_register_dispatcher(rpc_dispatcher, SPDK_CLIENT_SUBMIT_CONTING);
 	spdk_srv_rpc_register_dispatcher(rpc_dispatcher_iovs, SPDK_CLIENT_SUBMIT_IOVES);
-	int ret = spdk_srv_transport_listen(ctx->transport, &tid, NULL);
+	int ret = spdk_srv_transport_listen(ctx->transport, &tid);
 	if (ret != 0)
 	{
 		return -1;
@@ -729,7 +729,6 @@ hello_start(void *arg1)
 	int rc;
 
 	SPDK_NOTICELOG("Successfully started the application\n");
-	SPDK_NOTICELOG("size is %d", sizeof(struct spdk_rpc_req_cmd));
 	if (ctx->is_server)
 	{
 		rc = hello_rdma_init(ctx);

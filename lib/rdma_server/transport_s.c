@@ -92,19 +92,14 @@ static void srv_transport_opts_copy(struct spdk_srv_transport_opts *opts,
 	SET_FIELD(in_capsule_data_size);
 	SET_FIELD(max_io_size);
 	SET_FIELD(io_unit_size);
-	SET_FIELD(max_aq_depth);
 	SET_FIELD(buf_cache_size);
 	SET_FIELD(num_shared_buffers);
-	SET_FIELD(dif_insert_or_strip);
 	SET_FIELD(abort_timeout_sec);
-	SET_FIELD(association_timeout);
-	SET_FIELD(transport_specific);
 	SET_FIELD(acceptor_poll_rate);
-	SET_FIELD(zcopy);
 
 	/* Do not remove this statement, you should always update this statement when you adding a new field,
 	 * and do not forget to add the SET_FIELD statement for your added field. */
-	SPDK_STATIC_ASSERT(sizeof(struct spdk_srv_transport_opts) == 64, "Incorrect size");
+	SPDK_STATIC_ASSERT(sizeof(struct spdk_srv_transport_opts) == 48, "Incorrect size");
 
 #undef SET_FIELD
 #undef FILED_CHECK
@@ -238,7 +233,7 @@ srv_transport_find_listener(struct spdk_srv_transport *transport,
 }
 
 int spdk_srv_transport_listen(struct spdk_srv_transport *transport,
-							  const struct spdk_srv_transport_id *trid, struct spdk_srv_listen_opts *opts)
+							  const struct spdk_srv_transport_id *trid)
 
 {
 	struct spdk_srv_listener *listener;
@@ -256,7 +251,7 @@ int spdk_srv_transport_listen(struct spdk_srv_transport *transport,
 		listener->ref = 1;
 		listener->trid = *trid;
 		TAILQ_INSERT_TAIL(&transport->listeners, listener, link);
-		rc = transport->ops->listen(transport, &listener->trid, opts);
+		rc = transport->ops->listen(transport, &listener->trid);
 		if (rc != 0)
 		{
 			TAILQ_REMOVE(&transport->listeners, listener, link);
@@ -462,16 +457,6 @@ int srv_transport_conn_get_listen_trid(struct spdk_srv_conn *conn,
 	return conn->transport->ops->conn_get_listen_trid(conn, trid);
 }
 
-static void
-srv_transport_conn_abort_request(struct spdk_srv_conn *conn,
-								 struct spdk_srv_request *req)
-{
-	if (conn->transport->ops->conn_abort_request)
-	{
-		conn->transport->ops->conn_abort_request(conn, req);
-	}
-}
-
 bool spdk_srv_transport_opts_init(const char *transport_name,
 								  struct spdk_srv_transport_opts *opts, size_t opts_size)
 {
@@ -497,7 +482,6 @@ bool spdk_srv_transport_opts_init(const char *transport_name,
 		return false;
 	}
 
-	opts_local.association_timeout = SRV_TRANSPORT_DEFAULT_ASSOCIATION_TIMEOUT_IN_MS;
 	opts_local.acceptor_poll_rate = SPDK_SRV_DEFAULT_ACCEPT_POLL_RATE_US;
 	ops->opts_init(&opts_local);
 

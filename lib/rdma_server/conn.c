@@ -590,19 +590,7 @@ _client_qpair_submit_request(struct spdk_client_qpair *qpair, struct client_requ
 		goto error;
 	}
 
-	/* assign submit_tick before submitting req to specific transport */
-	if (spdk_unlikely(ctrlr->timeout_enabled))
-	{
-		if (req->submit_tick == 0)
-		{ /* req submitted for the first time */
-			req->submit_tick = spdk_get_ticks();
-			req->timed_out = false;
-		}
-	}
-	else
-	{
-		req->submit_tick = 0;
-	}
+	req->submit_tick = 0;
 
 	if (spdk_likely(client_qpair_get_state(qpair) == CLIENT_QPAIR_ENABLED))
 	{

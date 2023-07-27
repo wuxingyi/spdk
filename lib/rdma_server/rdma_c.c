@@ -2519,39 +2519,6 @@ client_rdma_qpair_abort_reqs(struct spdk_client_qpair *qpair, uint32_t dnr)
 	}
 }
 
-static void
-client_rdma_qpair_check_timeout(struct spdk_client_qpair *qpair)
-{
-	uint64_t t02;
-	struct spdk_client_rdma_req *rdma_req, *tmp;
-	struct client_rdma_qpair *rqpair = client_rdma_qpair(qpair);
-	struct spdk_client_ctrlr *ctrlr = qpair->ctrlr;
-	struct spdk_client_ctrlr_process *active_proc;
-
-	active_proc = qpair->active_proc;
-
-	/* Only check timeouts if the current process has a timeout callback. */
-	if (active_proc == NULL || active_proc->timeout_cb_fn == NULL)
-	{
-		return;
-	}
-
-	t02 = spdk_get_ticks();
-	TAILQ_FOREACH_SAFE(rdma_req, &rqpair->outstanding_reqs, link, tmp)
-	{
-		assert(rdma_req->req != NULL);
-
-		if (client_request_check_timeout(rdma_req->req, rdma_req->id, active_proc, t02))
-		{
-			/*
-			 * The requests are in order, so as soon as one has not timed out,
-			 * stop iterating.
-			 */
-			break;
-		}
-	}
-}
-
 static inline int
 client_rdma_request_ready(struct client_rdma_qpair *rqpair, struct spdk_client_rdma_req *rdma_req)
 {
@@ -2884,11 +2851,6 @@ client_rdma_qpair_process_completions(struct spdk_client_qpair *qpair,
 					  client_rdma_qpair_submit_recvs(rqpair)))
 	{
 		goto failed;
-	}
-
-	if (spdk_unlikely(rqpair->qpair.ctrlr->timeout_enabled))
-	{
-		client_rdma_qpair_check_timeout(qpair);
 	}
 
 	return rqpair->num_completions;
@@ -3310,10 +3272,6 @@ client_rdma_poll_group_process_completions(struct spdk_client_transport_poll_gro
 		if (spdk_unlikely(rqpair->state <= CLIENT_RDMA_QPAIR_STATE_INITIALIZING))
 		{
 			continue;
-		}
-		if (spdk_unlikely(qpair->ctrlr->timeout_enabled))
-		{
-			client_rdma_qpair_check_timeout(qpair);
 		}
 
 		client_rdma_qpair_submit_sends(rqpair);
