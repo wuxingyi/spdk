@@ -368,9 +368,3 @@ int spdk_client_host_id_parse(struct spdk_client_host_id *hostid, const char *st
 
 	return 0;
 }
-
-static int
-cmp_int(int a, int b)
-{
-	return a - b;
-}

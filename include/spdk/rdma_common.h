@@ -45,8 +45,6 @@ enum spdk_srv_data_transfer
 	SPDK_SRV_DATA_HOST_TO_CONTROLLER = 1,
 	/** Opcode transfers data from controller to host (e.g. Read) */
 	SPDK_SRV_DATA_CONTROLLER_TO_HOST = 2,
-	/** Opcode transfers data both directions */
-	SPDK_SRV_DATA_BIDIRECTIONAL = 3
 };
 
 /**
@@ -59,9 +57,6 @@ enum spdk_srv_trtype
 
 	/** TCP */
 	SPDK_SRV_TRTYPE_TCP = 0x2,
-
-	/** Intra-host transport (loopback) */
-	SPDK_SRV_TRTYPE_INTRA_HOST = 0xfe,
 };
 
 enum spdk_srv_transport_type
@@ -96,30 +91,25 @@ static inline enum spdk_srv_data_transfer spdk_srv_opc_get_data_transfer(uint8_t
 
 struct spdk_srv_rdma_accept_private_data
 {
-	uint16_t recfmt;  /* record format */
 	uint16_t crqsize; /* controller receive queue size */
-	uint8_t reserved[28];
 };
 
-SPDK_STATIC_ASSERT(sizeof(struct spdk_srv_rdma_accept_private_data) == 32, "Incorrect size");
+SPDK_STATIC_ASSERT(sizeof(struct spdk_srv_rdma_accept_private_data) == 2, "Incorrect size");
 
 struct spdk_srv_rdma_reject_private_data
 {
-	uint16_t recfmt; /* record format */
 	uint16_t sts;	 /* status */
 };
-SPDK_STATIC_ASSERT(sizeof(struct spdk_srv_rdma_reject_private_data) == 4, "Incorrect size");
+SPDK_STATIC_ASSERT(sizeof(struct spdk_srv_rdma_reject_private_data) == 2, "Incorrect size");
 
 struct spdk_srv_rdma_request_private_data
 {
-	uint16_t recfmt;  /* record format */
 	uint16_t qid;	  /* queue id */
 	uint16_t hrqsize; /* host receive queue size */
 	uint16_t hsqsize; /* host send queue size */
 	uint16_t cntlid;  /* controller id */
-	uint8_t reserved[22];
 };
-SPDK_STATIC_ASSERT(sizeof(struct spdk_srv_rdma_request_private_data) == 32, "Incorrect size");
+SPDK_STATIC_ASSERT(sizeof(struct spdk_srv_rdma_request_private_data) == 8, "Incorrect size");
 
 enum spdk_srv_adrfam
 {

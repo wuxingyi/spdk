@@ -640,21 +640,6 @@ struct client_ctrlr_detach_ctx
 	link;
 };
 
-struct client_driver
-{
-	pthread_mutex_t lock;
-
-	/** Multi-process shared attached controller list */
-	TAILQ_HEAD(, spdk_client_ctrlr)
-	shared_attached_ctrlrs;
-
-	bool initialized;
-	struct spdk_uuid default_extended_host_id;
-
-	/** netlink socket fd for hotplug messages */
-	int hotplug_fd;
-};
-
 #define client_delay usleep
 
 /**

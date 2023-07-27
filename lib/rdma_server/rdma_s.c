@@ -1475,7 +1475,6 @@ srv_rdma_event_accept(struct rdma_cm_id *id, struct spdk_srv_rdma_conn *rconn)
 	struct rdma_conn_param ctrlr_event_data = {};
 	int rc;
 
-	accept_data.recfmt = 0;
 	accept_data.crqsize = rconn->max_queue_depth;
 
 	ctrlr_event_data.private_data = &accept_data;
@@ -1522,7 +1521,6 @@ srv_rdma_event_reject(struct rdma_cm_id *id, enum spdk_srv_rdma_transport_error 
 {
 	struct spdk_srv_rdma_reject_private_data rej_data;
 
-	rej_data.recfmt = 0;
 	rej_data.sts = error;
 
 	rdma_reject(id, &rej_data, sizeof(rej_data));
@@ -1554,12 +1552,6 @@ srv_rdma_connect(struct spdk_srv_transport *transport, struct rdma_cm_event *eve
 	}
 
 	private_data = rdma_param->private_data;
-	if (private_data->recfmt != 0)
-	{
-		SPDK_ERRLOG("Received RDMA private data with RECFMT != 0\n");
-		srv_rdma_event_reject(event->id, SPDK_SRV_RDMA_ERROR_INVALID_RECFMT);
-		return -1;
-	}
 
 	SPDK_DEBUGLOG(rdma, "Connect Recv on fabric intf name %s, dev_name %s\n",
 				  event->id->verbs->device->name, event->id->verbs->device->dev_name);

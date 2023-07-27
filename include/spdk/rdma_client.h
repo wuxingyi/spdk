@@ -95,13 +95,6 @@ extern "C"
 		uint32_t request_id;
 	};
 
-	struct spdk_client_ctrlr_list
-	{
-		uint16_t ctrlr_count;
-		uint16_t ctrlr_list[2047];
-	};
-	SPDK_STATIC_ASSERT(sizeof(struct spdk_client_ctrlr_list) == 4096, "Incorrect size");
-
 	struct client_poll_group
 	{
 		struct spdk_client_poll_group *group;
@@ -188,13 +181,6 @@ extern "C"
 		 * Set to all zeroes to specify that no host ID should be provided to the controller.
 		 */
 		uint8_t host_id[8];
-
-		/**
-		 * The host identifier to use when connecting to controllers with extended (128-bit) host ID support.
-		 *
-		 * Set to all zeroes to specify that no host ID should be provided to the controller.
-		 */
-		uint8_t extended_host_id[16];
 
 		/**
 		 * Disable logging of requests that are completed with error status.
