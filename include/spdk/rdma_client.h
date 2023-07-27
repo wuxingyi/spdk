@@ -261,15 +261,6 @@ extern "C"
 
 	typedef enum spdk_client_qp_failure_reason spdk_client_qp_failure_reason;
 
-	/**
-	 * Client library transports
-	 *
-	 * NOTE: These are mapped directly to the Client over Fabrics TRTYPE values, except for PCIe,
-	 * which is a special case since Client over Fabrics does not define a TRTYPE for local PCIe.
-	 *
-	 * Currently, this uses 256 for PCIe which is intentionally outside of the 8-bit range of TRTYPE.
-	 * If the Client-oF specification ever defines a PCIe TRTYPE, this should be updated.
-	 */
 	enum spdk_client_transport_type
 	{
 		/**
@@ -659,11 +650,8 @@ extern "C"
 		 * The flag was originally named delay_pcie_doorbell. To allow backward compatibility
 		 * both names are kept in unnamed union.
 		 */
-		union
-		{
-			bool delay_cmd_submit;
-			bool delay_pcie_doorbell;
-		};
+
+		bool delay_cmd_submit;
 
 		/**
 		 * These fields allow specifying the memory buffers for the submission and/or

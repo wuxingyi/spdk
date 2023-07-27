@@ -101,7 +101,6 @@ srv_tgt_create_poll_group(void *args)
 {
 	struct spdk_srv_tgt_add_transport_ctx *ctx = (struct spdk_srv_tgt_add_transport_ctx *)args;
 	struct spdk_srv_tgt_add_transport_cb_ctx *ctx_wapper;
-	struct spdk_srv_tgt *tgt = ctx->tgt;
 	struct spdk_srv_poll_group *group;
 	struct spdk_srv_transport *transport = ctx->transport;
 	struct spdk_thread *thread = spdk_get_thread();
@@ -112,7 +111,6 @@ srv_tgt_create_poll_group(void *args)
 	{
 		SPDK_ERRLOG("Failed to allocate memory for srv_tgt_create_poll_group\n");
 		exit(-1);
-		return;
 	}
 
 	TAILQ_INIT(&group->tgroups);
@@ -134,7 +132,6 @@ srv_tgt_create_poll_group(void *args)
 	{
 		SPDK_ERRLOG("Failed to allocate memory for srv_tgt_create_poll_group\n");
 		exit(-1);
-		return;
 	}
 
 	ctx_wapper->ctx = ctx;
@@ -150,8 +147,6 @@ srv_tgt_destroy_poll_group(void *io_device, void *ctx_buf)
 	struct spdk_srv_tgt *tgt = io_device;
 	struct spdk_srv_poll_group *group = ctx_buf;
 	struct spdk_srv_transport_poll_group *tgroup, *tmp;
-	struct spdk_srv_subsystem_poll_group *sgroup;
-	uint32_t sid, nsid;
 
 	SPDK_DTRACE_PROBE1(srv_destroy_poll_group, spdk_thread_get_id(group->thread));
 
@@ -304,8 +299,6 @@ static void
 srv_tgt_destroy_cb(void *io_device)
 {
 	struct spdk_srv_tgt *tgt = io_device;
-	uint32_t i;
-	int rc;
 
 	_srv_tgt_destroy_next_transport(tgt);
 }
@@ -374,46 +367,12 @@ _srv_tgt_remove_transport(struct spdk_io_channel_iter *i)
 	spdk_for_each_channel_continue(i, 0);
 }
 
-static void
-_srv_tgt_add_transport_done(struct spdk_io_channel_iter *i, int status)
-{
-	struct spdk_srv_tgt_add_transport_ctx *ctx = spdk_io_channel_iter_get_ctx(i);
-
-	if (status)
-	{
-		ctx->status = status;
-		spdk_for_each_channel(ctx->tgt,
-							  _srv_tgt_remove_transport,
-							  ctx,
-							  _srv_tgt_remove_transport_done);
-		return;
-	}
-
-	ctx->transport->tgt = ctx->tgt;
-	TAILQ_INSERT_TAIL(&ctx->tgt->transports, ctx->transport, link);
-	ctx->cb_fn(ctx->cb_arg, status);
-	free(ctx);
-}
-
-static void
-_srv_tgt_add_transport(struct spdk_io_channel_iter *i)
-{
-	struct spdk_srv_tgt_add_transport_ctx *ctx = spdk_io_channel_iter_get_ctx(i);
-	struct spdk_io_channel *ch = spdk_io_channel_iter_get_channel(i);
-	struct spdk_srv_poll_group *group = spdk_io_channel_get_ctx(ch);
-	int rc;
-
-	rc = srv_poll_group_add_transport(group, ctx->transport);
-	spdk_for_each_channel_continue(i, rc);
-}
-
 void spdk_srv_tgt_add_transport(struct spdk_srv_tgt *tgt,
 								struct spdk_srv_transport *transport,
 								spdk_srv_tgt_add_transport_done_fn cb_fn,
 								void *cb_arg)
 {
 	struct spdk_srv_tgt_add_transport_ctx *ctx;
-	struct spdk_srv_poll_group *group;
 	struct spdk_cpuset tmp_cpumask = {};
 	uint32_t i;
 	char thread_name[32];

@@ -417,12 +417,6 @@ int srv_transport_poll_group_poll(struct spdk_srv_transport_poll_group *group)
 }
 
 static int
-srv_transport_req_free(struct spdk_srv_request *req)
-{
-	return req->conn->transport->ops->req_free(req);
-}
-
-static int
 srv_transport_req_complete(struct spdk_srv_request *req)
 {
 	return req->conn->transport->ops->req_complete(req);
@@ -666,16 +660,10 @@ _srv_request_complete(void *ctx)
 	struct spdk_srv_request *req = ctx;
 	struct spdk_rpc_req_cpl *rsp = req->rsp;
 	struct spdk_srv_conn *conn;
-	struct spdk_srv_subsystem_poll_group *sgroup = NULL;
-	bool is_aer = false;
-	uint32_t nsid;
-	bool paused;
-	uint8_t opcode;
 
 	rsp->sqid = 0;
 	rsp->status.p = 0;
 	rsp->cid = req->cmd->cid;
-	opcode = req->cmd->opc;
 
 	conn = req->conn;
 
@@ -689,8 +677,6 @@ _srv_request_complete(void *ctx)
 
 void spdk_srv_request_exec(struct spdk_srv_request *req)
 {
-	struct spdk_srv_conn *conn = req->conn;
-	struct spdk_srv_transport *transport = conn->transport;
 	enum spdk_srv_request_exec_status status;
 
 	// TODO: handle req
@@ -773,8 +759,6 @@ _srv_conn_destroy(void *ctx, int status)
 {
 	struct srv_conn_disconnect_ctx *conn_ctx = ctx;
 	struct spdk_srv_conn *conn = conn_ctx->conn;
-	struct spdk_srv_request *req, *tmp;
-	struct spdk_srv_subsystem_poll_group *sgroup;
 
 	assert(conn->state == SPDK_SRV_CONN_DEACTIVATING);
 	conn_ctx->qid = conn->qid;

@@ -539,8 +539,6 @@ struct spdk_client_ctrlr_process
 	uint64_t timeout_io_ticks;
 };
 
-#define SPDK_CLIENT_MAX_OPC 0xff
-
 /*
  * One of these per allocated PCI device.
  */
