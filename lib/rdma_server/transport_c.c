@@ -391,15 +391,6 @@ void client_transport_qpair_abort_reqs(struct spdk_client_qpair *qpair, uint32_t
 	transport->ops.qpair_abort_reqs(qpair, dnr);
 }
 
-int client_transport_qpair_reset(struct spdk_client_qpair *qpair)
-{
-	const struct spdk_client_transport *transport;
-
-	transport = client_get_transport(qpair->ctrlr->trstring);
-	assert(transport != NULL);
-	return transport->ops.qpair_reset(qpair);
-}
-
 int client_transport_qpair_submit_request(struct spdk_client_qpair *qpair, struct client_request *req)
 {
 	const struct spdk_client_transport *transport;

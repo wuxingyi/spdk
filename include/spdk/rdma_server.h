@@ -232,8 +232,6 @@ extern "C"
 		uint32_t num_shared_buffers;
 		uint32_t buf_cache_size;
 
-		uint32_t abort_timeout_sec;
-
 		/**
 		 * The size of spdk_srv_transport_opts according to the caller of this library is used for ABI
 		 * compatibility. The library uses this field to know how many fields in this

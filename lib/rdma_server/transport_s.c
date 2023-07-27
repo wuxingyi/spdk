@@ -94,12 +94,11 @@ static void srv_transport_opts_copy(struct spdk_srv_transport_opts *opts,
 	SET_FIELD(io_unit_size);
 	SET_FIELD(buf_cache_size);
 	SET_FIELD(num_shared_buffers);
-	SET_FIELD(abort_timeout_sec);
 	SET_FIELD(acceptor_poll_rate);
 
 	/* Do not remove this statement, you should always update this statement when you adding a new field,
 	 * and do not forget to add the SET_FIELD statement for your added field. */
-	SPDK_STATIC_ASSERT(sizeof(struct spdk_srv_transport_opts) == 48, "Incorrect size");
+	SPDK_STATIC_ASSERT(sizeof(struct spdk_srv_transport_opts) == 40, "Incorrect size");
 
 #undef SET_FIELD
 #undef FILED_CHECK

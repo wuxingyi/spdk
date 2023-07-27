@@ -969,7 +969,6 @@ int client_transport_ctrlr_connect_qpair_async(struct spdk_client_ctrlr *ctrlr,
 											   struct spdk_client_qpair *qpair);
 void client_transport_ctrlr_disconnect_qpair(struct spdk_client_ctrlr *ctrlr,
 											 struct spdk_client_qpair *qpair);
-int client_transport_qpair_reset(struct spdk_client_qpair *qpair);
 int client_transport_qpair_submit_request(struct spdk_client_qpair *qpair, struct client_request *req);
 int32_t client_transport_qpair_process_completions(struct spdk_client_qpair *qpair,
 												   uint32_t max_completions);

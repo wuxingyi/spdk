@@ -245,7 +245,6 @@ struct perf_task
 	bool is_read;
 	void *buf;
 	struct iovec iov;
-	struct spdk_dif_ctx dif_ctx;
 	struct rpc_request *rpc_req;
 };
 
@@ -359,7 +358,6 @@ void rpc_callback(void *cb_args, int status, struct iovec *iovs, int iovcnt, int
 	struct perf_task *task = (struct perf_task *)cb_args;
 	struct hello_context_t *ctx;
 	uint64_t tsc_diff;
-	struct ns_entry *entry;
 	ctx = task->ctx;
 	ctx->current_queue_depth--;
 	ctx->stats.io_completed++;

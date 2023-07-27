@@ -2482,13 +2482,6 @@ client_rdma_qpair_submit_request(struct spdk_client_qpair *qpair,
 	return client_rdma_qpair_queue_send_wr(rqpair, wr);
 }
 
-static int
-client_rdma_qpair_reset(struct spdk_client_qpair *qpair)
-{
-	/* Currently, doing nothing here */
-	return 0;
-}
-
 static void
 client_rdma_qpair_abort_reqs(struct spdk_client_qpair *qpair, uint32_t dnr)
 {
@@ -3394,7 +3387,6 @@ const struct spdk_client_transport_ops rdma_trans_ops = {
 	.ctrlr_disconnect_qpair = client_rdma_ctrlr_disconnect_qpair,
 
 	.qpair_abort_reqs = client_rdma_qpair_abort_reqs,
-	.qpair_reset = client_rdma_qpair_reset,
 	.qpair_submit_request = client_rdma_qpair_submit_request,
 	.qpair_process_completions = client_rdma_qpair_process_completions,
 	.qpair_iterate_requests = client_rdma_qpair_iterate_requests,

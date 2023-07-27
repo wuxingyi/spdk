@@ -2729,7 +2729,6 @@ bool srv_rdma_request_process(struct spdk_srv_rdma_transport *rtransport,
 #define SPDK_SRV_RDMA_DEFAULT_MAX_QUEUE_DEPTH 4096
 #define SPDK_SRV_RDMA_DEFAULT_AQ_DEPTH 4096
 #define SPDK_SRV_RDMA_DEFAULT_SRQ_DEPTH 4096
-#define SPDK_SRV_RDMA_DEFAULT_MAX_CONNS_PER_TGT 65535
 #define SPDK_SRV_RDMA_DEFAULT_IN_CAPSULE_DATA_SIZE 8192
 #define SPDK_SRV_RDMA_DEFAULT_MAX_IO_SIZE 131072
 #define SPDK_SRV_RDMA_MIN_IO_BUFFER_SIZE (SPDK_SRV_RDMA_DEFAULT_MAX_IO_SIZE / SPDK_SRV_MAX_SGL_ENTRIES)
@@ -2737,20 +2736,17 @@ bool srv_rdma_request_process(struct spdk_srv_rdma_transport *rtransport,
 #define SPDK_SRV_RDMA_DEFAULT_BUFFER_CACHE_SIZE 32
 #define SPDK_SRV_RDMA_DEFAULT_NO_SRQ false
 #define SPDK_SRV_RDMA_ACCEPTOR_BACKLOG 100
-#define SPDK_SRV_RDMA_DEFAULT_ABORT_TIMEOUT_SEC 1
 #define SPDK_SRV_RDMA_DEFAULT_NO_WR_BATCHING true // try set this
 
 static void
 srv_rdma_opts_init(struct spdk_srv_transport_opts *opts)
 {
 	opts->max_queue_depth = SPDK_SRV_RDMA_DEFAULT_MAX_QUEUE_DEPTH;
-	opts->max_conns_per_tgt = SPDK_SRV_RDMA_DEFAULT_MAX_CONNS_PER_TGT;
 	opts->in_capsule_data_size = SPDK_SRV_RDMA_DEFAULT_IN_CAPSULE_DATA_SIZE;
 	opts->max_io_size = SPDK_SRV_RDMA_DEFAULT_MAX_IO_SIZE;
 	opts->io_unit_size = SPDK_SRV_RDMA_MIN_IO_BUFFER_SIZE;
 	opts->num_shared_buffers = SPDK_SRV_RDMA_DEFAULT_NUM_SHARED_BUFFERS;
 	opts->buf_cache_size = SPDK_SRV_RDMA_DEFAULT_BUFFER_CACHE_SIZE;
-	opts->abort_timeout_sec = SPDK_SRV_RDMA_DEFAULT_ABORT_TIMEOUT_SEC;
 }
 
 static int srv_rdma_destroy(struct spdk_srv_transport *transport,
@@ -2825,13 +2821,12 @@ srv_rdma_create(struct spdk_srv_transport_opts *opts)
 
 	SPDK_INFOLOG(rdma, "*** RDMA Transport Init ***\n"
 					   "  Transport opts:  max_ioq_depth=%d, max_io_size=%d,\n"
-					   "  max_io_conns_per_ctrlr=%d, io_unit_size=%d,\n"
+					   "  io_unit_size=%d,\n"
 					   "  in_capsule_data_size=%d,\n"
 					   "  num_shared_buffers=%d, num_cqe=%d, max_srq_depth=%d, no_srq=%d,"
-					   "  acceptor_backlog=%d, no_wr_batching=%d abort_timeout_sec=%d\n",
+					   "  acceptor_backlog=%d, no_wr_batching=%d\n",
 				 opts->max_queue_depth,
 				 opts->max_io_size,
-				 opts->max_conns_per_tgt - 1,
 				 opts->io_unit_size,
 				 opts->in_capsule_data_size,
 				 opts->num_shared_buffers,
@@ -2839,8 +2834,7 @@ srv_rdma_create(struct spdk_srv_transport_opts *opts)
 				 rtransport->rdma_opts.max_srq_depth,
 				 rtransport->rdma_opts.no_srq,
 				 rtransport->rdma_opts.acceptor_backlog,
-				 rtransport->rdma_opts.no_wr_batching,
-				 opts->abort_timeout_sec);
+				 rtransport->rdma_opts.no_wr_batching);
 
 	/* I/O unit size cannot be larger than max I/O size */
 	if (opts->io_unit_size > opts->max_io_size)

@@ -308,124 +308,6 @@ _client_ns_cmd_rw(struct spdk_client_qpair *qpair,
 	return req;
 }
 
-int spdk_client_ns_cmd_read(struct spdk_client_qpair *qpair, void *buffer,
-							uint64_t lba,
-							uint32_t lba_count, spdk_req_cmd_cb cb_fn, void *cb_arg)
-{
-	struct client_request *req;
-	struct client_payload payload;
-	int rc = 0;
-
-	payload = CLIENT_PAYLOAD_CONTIG(buffer, NULL);
-
-	req = _client_ns_cmd_rw(qpair, &payload, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_READ,
-							false, &rc);
-	if (req != NULL)
-	{
-		return client_qpair_submit_request(qpair, req);
-	}
-	else
-	{
-		return client_ns_map_failure_rc(lba_count,
-										qpair->ctrlr->opts.sectors_per_max_io,
-										qpair->ctrlr->opts.sectors_per_stripe,
-										qpair->ctrlr->opts.io_queue_requests,
-										rc);
-	}
-}
-
-int spdk_client_ns_cmd_readv(struct spdk_client_qpair *qpair,
-							 uint64_t lba, uint32_t lba_count,
-							 spdk_req_cmd_cb cb_fn, void *cb_arg,
-							 spdk_client_req_reset_sgl_cb reset_sgl_fn,
-							 spdk_client_req_next_sge_cb next_sge_fn)
-{
-	struct client_request *req;
-	struct client_payload payload;
-	int rc = 0;
-
-	if (reset_sgl_fn == NULL || next_sge_fn == NULL)
-	{
-		return -EINVAL;
-	}
-
-	payload = CLIENT_PAYLOAD_SGL(reset_sgl_fn, next_sge_fn, cb_arg, NULL, 0, 0, 0, 0, NULL);
-
-	req = _client_ns_cmd_rw(qpair, &payload, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_READ,
-							true, &rc);
-	if (req != NULL)
-	{
-		return client_qpair_submit_request(qpair, req);
-	}
-	else
-	{
-		return client_ns_map_failure_rc(lba_count,
-										qpair->ctrlr->opts.sectors_per_max_io,
-										qpair->ctrlr->opts.sectors_per_stripe,
-										qpair->ctrlr->opts.io_queue_requests,
-										rc);
-	}
-}
-
-int spdk_client_ns_cmd_write(struct spdk_client_qpair *qpair,
-							 void *buffer, uint64_t lba,
-							 uint32_t lba_count, spdk_req_cmd_cb cb_fn, void *cb_arg)
-{
-	struct client_request *req;
-	struct client_payload payload;
-	int rc = 0;
-
-	payload = CLIENT_PAYLOAD_CONTIG(buffer, NULL);
-
-	req = _client_ns_cmd_rw(qpair, &payload, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_WRITE,
-							false, &rc);
-	if (req != NULL)
-	{
-		return client_qpair_submit_request(qpair, req);
-	}
-	else
-	{
-		return client_ns_map_failure_rc(lba_count,
-										qpair->ctrlr->opts.sectors_per_max_io,
-										qpair->ctrlr->opts.sectors_per_stripe,
-										qpair->ctrlr->opts.io_queue_requests,
-										rc);
-	}
-}
-
-int spdk_client_ns_cmd_writev(struct spdk_client_qpair *qpair,
-							  uint64_t lba, uint32_t lba_count,
-							  spdk_req_cmd_cb cb_fn, void *cb_arg,
-							  spdk_client_req_reset_sgl_cb reset_sgl_fn,
-							  spdk_client_req_next_sge_cb next_sge_fn)
-{
-	struct client_request *req;
-	struct client_payload payload;
-	int rc = 0;
-
-	if (reset_sgl_fn == NULL || next_sge_fn == NULL)
-	{
-		return -EINVAL;
-	}
-
-	payload = CLIENT_PAYLOAD_SGL(reset_sgl_fn, next_sge_fn, cb_arg, NULL, 0, 0, 0, 0, NULL);
-
-	req = _client_ns_cmd_rw(qpair, &payload, 0, lba, lba_count, cb_fn, cb_arg, SPDK_CLIENT_OPC_WRITE,
-							true, &rc);
-	if (req != NULL)
-	{
-		return client_qpair_submit_request(qpair, req);
-	}
-	else
-	{
-		return client_ns_map_failure_rc(lba_count,
-										qpair->ctrlr->opts.sectors_per_max_io,
-										qpair->ctrlr->opts.sectors_per_stripe,
-										qpair->ctrlr->opts.io_queue_requests,
-										rc);
-	}
-}
-
 void rpc_reclaim_out_iovs(struct rpc_request *req)
 {
 	struct iovec *iov;
@@ -876,7 +758,8 @@ void rpc_write_cb(void *ctx, const struct spdk_rpc_req_cpl *cpl)
 	}
 
 	lba_count = SPDK_CEIL_DIV(req->in_payload_length, sector_size);
-	ret = spdk_client_rpc_request_read(req->qpair, 0, lba_count, req->request_id, req->in_length, req->opc, req->submit_type, rpc_read_cb, req, rpc_request_reset_in_sgl, rpc_request_next_in_sge);
+	ret = spdk_client_rpc_request_read(req->qpair, 0, lba_count, req->request_id, req->in_length, req->opc,
+									   req->submit_type, rpc_read_cb, req, rpc_request_reset_in_sgl, rpc_request_next_in_sge);
 	if (ret != 0)
 	{
 		SPDK_ERRLOG("spdk_client_rpc_request_read failed %d\n", ret);
@@ -935,7 +818,8 @@ int spdk_client_submit_rpc_request(struct spdk_client_qpair *qpair, uint32_t opc
 	{
 		md5sum = req->md5sum;
 	}
-	return spdk_client_rpc_request_write(req->qpair, 0, lba_count, req->request_id, req->out_length, req->opc, req->submit_type, md5sum, rpc_write_cb, req, rpc_request_reset_out_sgl, rpc_request_next_out_sge);
+	return spdk_client_rpc_request_write(req->qpair, 0, lba_count, req->request_id, req->out_length, req->opc, req->submit_type, md5sum,
+										 rpc_write_cb, req, rpc_request_reset_out_sgl, rpc_request_next_out_sge);
 }
 
 int spdk_client_empty_free_request(struct spdk_client_qpair *qpair) {
@@ -972,7 +856,8 @@ int spdk_client_submit_rpc_request_iovs_directly(struct spdk_client_qpair *qpair
 	uint32_t sector_size = req->qpair->ctrlr->opts.sector_size;
 	lba_count = SPDK_CEIL_DIV(req->out_payload_length, sector_size);
 
-	return spdk_client_rpc_request_write(req->qpair, 0, lba_count, req->request_id, req->out_payload_length, req->opc, req->submit_type, NULL, rpc_write_cb, req, rpc_request_reset_out_sgl, rpc_request_next_out_sge);
+	return spdk_client_rpc_request_write(req->qpair, 0, lba_count, req->request_id, req->out_payload_length, req->opc,
+										 req->submit_type, NULL, rpc_write_cb, req, rpc_request_reset_out_sgl, rpc_request_next_out_sge);
 }
 
 int spdk_client_submit_rpc_request_iovs(struct spdk_client_qpair *qpair, uint32_t opc, struct iovec *raw_ioves, int raw_iov_cnt, uint32_t length,
@@ -1029,5 +914,6 @@ int spdk_client_submit_rpc_request_iovs(struct spdk_client_qpair *qpair, uint32_
 	{
 		md5sum = req->md5sum;
 	}
-	return spdk_client_rpc_request_write(req->qpair, 0, lba_count, req->request_id, req->out_length, req->opc, req->submit_type, md5sum, rpc_write_cb, req, rpc_request_reset_out_sgl, rpc_request_next_out_sge);
+	return spdk_client_rpc_request_write(req->qpair, 0, lba_count, req->request_id, req->out_length, req->opc, req->submit_type,
+										 md5sum, rpc_write_cb, req, rpc_request_reset_out_sgl, rpc_request_next_out_sge);
 }

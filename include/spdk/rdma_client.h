@@ -1015,107 +1015,6 @@ extern "C"
 	typedef int (*spdk_client_req_next_sge_cb)(void *cb_arg, void **address, uint32_t *length);
 
 	/**
-	 * Submit a write I/O to the specified Client namespace.
-	 *
-	 * The command is submitted to a qpair allocated by spdk_client_ctrlr_alloc_io_qpair().
-	 * The user must ensure that only one thread submits I/O on a given qpair at any
-	 * given time.
-	 *
-	 * \param qpair I/O queue pair to submit the request.
-	 * \param payload Virtual address pointer to the data payload.
-	 * \param lba Starting LBA to write the data.
-	 * \param lba_count Length (in sectors) for the write operation.
-	 * \param cb_fn Callback function to invoke when the I/O is completed.
-	 * \param cb_arg Argument to pass to the callback function.
-
-	 *
-	 * \return 0 if successfully submitted, negated errnos on the following error conditions:
-	 * -EINVAL: The request is malformed.
-	 * -ENOMEM: The request cannot be allocated.
-	 * -ENXIO: The qpair is failed at the transport level.
-	 */
-	int spdk_client_ns_cmd_write(struct spdk_client_qpair *qpair, void *payload,
-								 uint64_t lba, uint32_t lba_count, spdk_req_cmd_cb cb_fn,
-								 void *cb_arg);
-
-	/**
-	 * Submit a write I/O to the specified Client namespace.
-	 *
-	 * The command is submitted to a qpair allocated by spdk_client_ctrlr_alloc_io_qpair().
-	 * The user must ensure that only one thread submits I/O on a given qpair at any
-	 * given time.
-	 *
-	 * \param qpair I/O queue pair to submit the request.
-	 * \param lba Starting LBA to write the data.
-	 * \param lba_count Length (in sectors) for the write operation.
-	 * \param cb_fn Callback function to invoke when the I/O is completed.
-	 * \param cb_arg Argument to pass to the callback function.
-	 * \param reset_sgl_fn Callback function to reset scattered payload.
-	 * \param next_sge_fn Callback function to iterate each scattered payload memory
-	 * segment.
-	 *
-	 * \return 0 if successfully submitted, negated errnos on the following error conditions:
-	 * -EINVAL: The request is malformed.
-	 * -ENOMEM: The request cannot be allocated.
-	 * -ENXIO: The qpair is failed at the transport level.
-	 */
-	int spdk_client_ns_cmd_writev(struct spdk_client_qpair *qpair,
-								  uint64_t lba, uint32_t lba_count,
-								  spdk_req_cmd_cb cb_fn, void *cb_arg,
-								  spdk_client_req_reset_sgl_cb reset_sgl_fn,
-								  spdk_client_req_next_sge_cb next_sge_fn);
-
-	/**
-	 * \brief Submits a read I/O to the specified Client namespace.
-	 *
-	 * The command is submitted to a qpair allocated by spdk_client_ctrlr_alloc_io_qpair().
-	 * The user must ensure that only one thread submits I/O on a given qpair at any
-	 * given time.
-	 *
-	 * \param qpair I/O queue pair to submit the request.
-	 * \param payload Virtual address pointer to the data payload.
-	 * \param lba Starting LBA to read the data.
-	 * \param lba_count Length (in sectors) for the read operation.
-	 * \param cb_fn Callback function to invoke when the I/O is completed.
-	 * \param cb_arg Argument to pass to the callback function.
-	 *
-	 * \return 0 if successfully submitted, negated errnos on the following error conditions:
-	 * -EINVAL: The request is malformed.
-	 * -ENOMEM: The request cannot be allocated.
-	 * -ENXIO: The qpair is failed at the transport level.
-	 */
-	int spdk_client_ns_cmd_read(struct spdk_client_qpair *qpair, void *payload,
-								uint64_t lba, uint32_t lba_count, spdk_req_cmd_cb cb_fn,
-								void *cb_arg);
-
-	/**
-	 * Submit a read I/O to the specified Client namespace.
-	 *
-	 * The command is submitted to a qpair allocated by spdk_client_ctrlr_alloc_io_qpair().
-	 * The user must ensure that only one thread submits I/O on a given qpair at any
-	 * given time.
-	 *
-	 * \param qpair I/O queue pair to submit the request.
-	 * \param lba Starting LBA to read the data.
-	 * \param lba_count Length (in sectors) for the read operation.
-	 * \param cb_fn Callback function to invoke when the I/O is completed.
-	 * \param cb_arg Argument to pass to the callback function.
-	 * \param reset_sgl_fn Callback function to reset scattered payload.
-	 * \param next_sge_fn Callback function to iterate each scattered payload memory
-	 * segment.
-	 *
-	 * \return 0 if successfully submitted, negated errnos on the following error conditions:
-	 * -EINVAL: The request is malformed.
-	 * -ENOMEM: The request cannot be allocated.
-	 * -ENXIO: The qpair is failed at the transport level.
-	 */
-	int spdk_client_ns_cmd_readv(struct spdk_client_qpair *qpair,
-								 uint64_t lba, uint32_t lba_count,
-								 spdk_req_cmd_cb cb_fn, void *cb_arg,
-								 spdk_client_req_reset_sgl_cb reset_sgl_fn,
-								 spdk_client_req_next_sge_cb next_sge_fn);
-
-	/**
 	 * \brief Gets the Client qpair ID for the specified qpair.
 	 *
 	 * \param qpair Pointer to the Client queue pair.
@@ -1188,8 +1087,6 @@ extern "C"
 		void (*ctrlr_disconnect_qpair)(struct spdk_client_ctrlr *ctrlr, struct spdk_client_qpair *qpair);
 
 		void (*qpair_abort_reqs)(struct spdk_client_qpair *qpair, uint32_t dnr);
-
-		int (*qpair_reset)(struct spdk_client_qpair *qpair);
 
 		int (*qpair_submit_request)(struct spdk_client_qpair *qpair, struct client_request *req);
 
