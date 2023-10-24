@@ -897,6 +897,91 @@ def bdev_zone_block_delete(client, name):
     params = {'name': name}
     return client.call('bdev_zone_block_delete', params)
 
+def size_str_to_num(size):
+    match = False
+    units = {
+        'GB': 1024 * 1024 * 1024,
+        'G' : 1024 * 1024 * 1024,
+        'M' : 1024 * 1024,
+        'MB': 1024 * 1024, 
+        'K' : 1024,
+        'KB': 1024,
+        'B' : 1
+    }
+    for key, val in units.items():
+        if size.upper().endswith(key):
+            size = size[:-1*len(key)]
+            if (len(size) == 0):
+                return 0
+            try:
+                size = int(size) * val
+            except:
+                return 0
+            match=True
+            break
+    if(match is False):
+        return 0
+    return size
+
+@deprecated_alias('construct_fastblock_bdev')
+def bdev_fastblock_create(client, pool_id, pool_name, image_name, block_size, image_size, monitor_address, name, object_size=0):
+    """Create a fastblock image block device.
+
+    Args:
+        pool_id: fastblock pool id
+        pool_name: fastblock pool name
+        image_name: fastblock image name
+        block_size: block size of RBD volume
+        image_size: image size , The units it follows: GB, G, M, MB, K, KB, B
+        object_size: object size
+        monitor_address: monitor_address
+        name: name of block device (optional)
+
+    Returns:
+        Name of created block device.
+    """
+    image_size = size_str_to_num(image_size)
+    if image_size == 0:
+        return "Illegal image_size"
+        
+    params = {
+        'pool_id': pool_id,
+        'pool_name': pool_name,
+        'image_name': image_name,
+        'block_size': block_size,
+        'image_size': image_size,
+        'object_size': object_size,
+        'monitor_address': monitor_address,
+        'name': name
+    }
+
+    return client.call('bdev_fastblock_create', params)
+
+@deprecated_alias('delete_fastblock_bdev')
+def bdev_fastblock_delete(client, name):
+    """Remove fastblock bdev from the system.
+
+    Args:
+        name: name of fastblock bdev to delete
+    """
+    params = {'name': name}
+    return client.call('bdev_fastblock_delete', params)
+
+def bdev_fastblock_resize(client, name, new_size):
+    """Resize fastblock bdev in the system.
+
+    Args:
+        name: name of fastblock bdev to resize
+        new_size: new bdev size of resize operation, The units it follows: GB, G, M, MB, K, KB, B
+    """
+    new_size = size_str_to_num(new_size)
+    if new_size == 0:
+        return "Illegal new_size"
+    params = {
+            'name': name,
+            'new_size': new_size,
+            }
+    return client.call('bdev_fastblock_resize', params)
 
 def bdev_rbd_register_cluster(client, name, user=None, config_param=None, config_file=None, key_file=None):
     """Create a Rados Cluster object of the Ceph RBD backend.

@@ -826,6 +826,50 @@ if __name__ == "__main__":
     p.add_argument('name', help='Virtual zone bdev name')
     p.set_defaults(func=bdev_zone_block_delete)
 
+    def bdev_fastblock_create(args):
+        print_json(rpc.bdev.bdev_fastblock_create(args.client,
+                                            name=args.name,
+                                            pool_id=args.pool_id,
+                                            pool_name=args.pool_name,
+                                            image_name=args.image_name,
+                                            block_size=args.block_size,
+                                            image_size=args.image_size,
+                                            object_size=args.object_size,
+                                            monitor_address=args.monitor_address))
+
+    p = subparsers.add_parser('bdev_fastblock_create', aliases=['construct_fastblock_bdev'],
+                              help='Add a bdev with fastblock image backend')
+    p.add_argument('-b', '--name', help="Name of the bdev")
+    p.add_argument('-S', '--object_size', help='object size', required=False, type=int, default=1024*4096)
+    p.add_argument('-P', '--pool_id', help='pool id', type=int)
+    p.add_argument('-p', '--pool_name', help='pool name')
+    p.add_argument('-i', '--image_name', help='image name')
+    p.add_argument('-k', '--block_size', help='image block size', required=False, type=int, default=4096)
+    p.add_argument('-I', '--image_size', help='image size, The units it follows: GB, G, M, MB, K, KB, B')
+    p.add_argument('-m', '--monitor_address', help='monitor address')
+    p.set_defaults(func=bdev_fastblock_create)
+
+    def bdev_fastblock_delete(args):
+        rpc.bdev.bdev_fastblock_delete(args.client,
+                                 name=args.name)
+
+    p = subparsers.add_parser('bdev_fastblock_delete', aliases=['delete_fastblock_bdev'],
+                              help='Delete a fastblock image bdev')
+    p.add_argument('name', help='fastblock bdev name')
+    p.set_defaults(func=bdev_fastblock_delete)
+
+    def bdev_fastblock_resize(args):
+        print_json(rpc.bdev.bdev_fastblock_resize(args.client,
+                                 name=args.name,
+                                 new_size=args.new_size))
+
+    p = subparsers.add_parser('bdev_fastblock_resize',
+                              help='Resize a fastblock image bdev')
+    p.add_argument('name', help='fastblock bdev name')
+    p.add_argument('new_size', help='new bdev size for resize operation, The units it follows: GB, G, M, MB, K, KB, B')
+    p.set_defaults(func=bdev_fastblock_resize)
+
+
     def bdev_rbd_register_cluster(args):
         config_param = None
         if args.config_param:
